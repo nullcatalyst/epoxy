@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "rootDir": "src",
+        "outDir": "dst",
+        "target": "es5",
+        "lib": [
+            "esnext"
+        ],
+        "strictNullChecks": true,
+        "sourceMap": true
+    }
+}
