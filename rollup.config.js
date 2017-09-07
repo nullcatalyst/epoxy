@@ -1,12 +1,19 @@
 import tsc from "rollup-plugin-typescript";
-import node from "rollup-plugin-node-resolve";
-// import cjs from "rollup-plugin-commonjs";
 import typescript from "typescript";
+import node from "rollup-plugin-node-resolve";
+import uglify from "rollup-plugin-uglify";
+import { minify } from "uglify-es";
 
 const plugins = [
     tsc({ typescript }),
-    // cjs(),
     node(),
+    uglify({
+        mangle: {
+            toplevel: true,
+            eval: true,
+            // properties: true,
+        },
+    }, minify),
 ];
 
 const external = [
@@ -17,7 +24,8 @@ const external = [
 
     // npm
     "bluebird",
-    "glob",
+    "chokidar",
+    "globby",
     "html-minifier",
     "sax",
 ];
@@ -30,7 +38,8 @@ const globals = {
 
     // npm
     "bluebird": "require('bluebird')",
-    "glob": "require('glob')",
+    "chokidar": "require('chokidar')",
+    "globby": "require('globby')",
     "html-minifier": "require('html-minifier')",
     "sax": "require('sax')",
 };
@@ -51,6 +60,7 @@ export default [
         output: {
             file: "main.js",
             format: "cjs",
+            banner: "#!/usr/bin/env node",
         },
         plugins,
         external,

@@ -1,31 +1,49 @@
 import * as EventEmitter from "events";
-import * as glob from "glob";
 import * as Promise from "bluebird";
+import * as chokidar from "chokidar";
+import globby from "globby";
 import { Module } from "./module";
 import { Parser } from "./parser";
 import { DefaultParser } from "./default-parser";
-
-const globp = Promise.promisify(glob);
 
 export interface LibraryOptions {
     parser?: typeof Parser;
     watch?: boolean; // Default false
 }
 
-export class Library extends EventEmitter {
-    private _modules: MapLike<Module>;
+interface LibraryEvents {
+    /** There was an error parsing a file */
+    on(event: "error", handler: (error: Error) => void);
 
-    constructor(globPattern: string, options?: LibraryOptions) {
+    /** Initial parsing is complete */
+    on(event: "done", handler: () => void);
+
+    /** A file has been updated and parsed */
+    on(event: "update", handler: (module: Module) => void);
+}
+
+export class Library extends EventEmitter implements LibraryEvents {
+    private _modules: MapLike<Module>;
+    private _watcher: chokidar.FSWatcher | null;
+
+    constructor(pattern: string | string[], options?: LibraryOptions) {
         super();
 
-        this._modules = {};
+        // Set default options
+        options = options || {};
+        options.parser = options.parser || DefaultParser;
+        options.watch = options.watch || false;
 
-        const ParserClass = (options && options.parser) || DefaultParser;
-        globp(globPattern)
+        this._modules = {};
+        this._watcher = null;
+
+        globby(pattern)
             .then((files: string[]) => {
                 return Promise.all(files.map((filePath: string) => {
-                    const parser = new ParserClass(this, filePath);
-                    return parser.promise;
+                    const parser = new options!.parser!(this, filePath);
+                    return parser.promise.catch((error: Error) => {
+                        this.emit("error", error, filePath);
+                    });
                 }));
             })
             .then((modules: Module[]) => {
@@ -33,7 +51,30 @@ export class Library extends EventEmitter {
                     this._modules[module.name] = module;
                 });
 
-                this.emit("parse");
+                this.emit("done");
+
+                if (options!.watch!) {
+                    const update = (fileName: string) => {
+                        const parser = new options!.parser!(this, fileName);
+                        parser.promise
+                            .then((module: Module) => {
+                                this._modules[module.name] = module;
+                                this.emit("update", module);
+                            })
+                            .catch((error: Error) => {
+                                this.emit("error", error, fileName);
+                            });
+                    };
+
+                    const remove = (fileName: string) => {
+                        delete this._modules[Module.fileNameToModuleName(fileName)];
+                    };
+
+                    this._watcher = chokidar.watch(pattern, { ignoreInitial: true })
+                        .on("add", update)
+                        .on("change", update)
+                        .on("unlink", remove);
+                }
             });
     }
 
@@ -46,5 +87,12 @@ export class Library extends EventEmitter {
             });
 
         return renderFns;
+    }
+
+    stop(): void {
+        if (this._watcher) {
+            this._watcher.close();
+            this._watcher = null;
+        }
     }
 }

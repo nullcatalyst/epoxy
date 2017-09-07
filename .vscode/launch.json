@@ -8,11 +8,7 @@
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "program": "${workspaceRoot}/src/main.ts",
-            "sourceMaps": true,
-            "outFiles": [
-                "${workspaceRoot}/dst/**/*.js"
-            ]
+            "program": "${workspaceRoot}/main.js"
         }
     ]
 }

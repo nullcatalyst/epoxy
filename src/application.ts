@@ -78,6 +78,7 @@ export class Application extends EventEmitter {
             }
         };
 
-        library.on("parse", update);
+        library.on("done", update)
+            .on("update", update);
     }
 }

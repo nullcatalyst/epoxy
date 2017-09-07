@@ -96,8 +96,6 @@ export class TemplateDelegate implements ParserDelegate {
         if (this._stack == 0) {
             this._parsed += "`)}return $buf.join(``);";
 
-            // console.log("TEMPLATE:", this._parsed);
-            console.log();
             parser.appendTemplate(new Function("$esc", "$ins", "$locals", this._parsed) as TemplateFunction);
             parser.changeDelegate(null);
         }
