@@ -5,7 +5,7 @@ import * as Promise from "bluebird";
 import { Module } from "./module";
 import { Library } from "./library";
 
-export { Tag } from "sax";
+export type Tag = sax.Tag;
 
 export interface ParserDelegate {
     onText(parser: Parser, text: string);

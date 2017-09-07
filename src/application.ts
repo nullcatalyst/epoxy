@@ -1,33 +1,69 @@
 import * as EventEmitter from "events";
 import * as Promise from "bluebird";
+import * as htmlmin from "html-minifier";
 import { escapeXml } from "./escape";
 import { Library } from "./library";
 import { Module } from "./module";
+
+export interface ApplicationOptions {
+    escape?: EscapeFunction; // default: escapeXml
+    output?: string; // default: <no output>
+    minify?: boolean; // default: false
+    doctype?: boolean; // default: true
+}
 
 export class Application extends EventEmitter {
     private _library: Library;
     private _fileName: string;
     private _name: string;
 
-    constructor(library: Library, fileName: string, $esc: EscapeFunction = escapeXml) {
+    constructor(library: Library, fileName: string, options?: ApplicationOptions) {
         super();
+
+        // Set default options
+        options = options || {};
+        options.escape = options.escape || escapeXml;
+        options.minify = options.minify || false;
+        options.doctype = options.doctype !== false;
 
         this._library = library;
         this._fileName = fileName;
         this._name = Module.fileNameToModuleName(fileName);
 
         const update = () => {
-            const renderFns = this._library.getRenderFunctions($esc, insert);
+            const renderFns = this._library.getRenderFunctions(options!.escape!, insert);
             const included: MapLike<boolean> = {};
 
             let style  = "";
             let script = "";
 
-            let result = insert(this._name, {});
-            result = result.replace("</Styles/>", "<style>" + style + "</style>");
-            result = result.replace("</Scripts/>", "<script>" + script + "</script>");
+            let output = insert(this._name, {});
+            output = output.replace("</Styles/>", "<style>" + style + "</style>");
+            output = output.replace("</Scripts/>", "<script>" + script + "</script>");
 
-            this.emit("render", result);
+            if (options!.minify!) {
+                output = htmlmin.minify(output, {
+                    collapseBooleanAttributes: true,
+                    collapseWhitespace: true,
+                    decodeEntities: true,
+                    minifyCSS: true,
+                    minifyJS: true,
+                    quoteCharacter: '"',
+                    removeComments: true,
+                    removeRedundantAttributes: true,
+                    removeScriptTypeAttributes: true,
+                    removeStyleLinkTypeAttributes: true,
+                    sortAttributes: true,
+                    sortClassName: true,
+                    useShortDoctype: true,
+                } as any);
+            }
+
+            if (options!.doctype!) {
+                output = "<!doctype html>" + output;
+            }
+
+            this.emit("output", output);
 
             function insert($name: string, $locals: any): string {
                 const [module, render] = renderFns[$name];
@@ -43,11 +79,5 @@ export class Application extends EventEmitter {
         };
 
         library.on("parse", update);
-    }
-
-    addCustomHandlers(renderFns: MapLike<RenderFunction>): void {
-        renderFns["Styles"]     = () => "";
-        renderFns["Scripts"]    = () => "";
-        renderFns["Children"]   = () => "";
     }
 }

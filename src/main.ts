@@ -1,9 +1,8 @@
-import { Library } from "./library";
-import { Application } from "./application";
+import { Library, Application } from "./lib";
 
-const library = new Library("test/**/*.html");
-const application = new Application(library, "Layout");
+const lib = new Library("test/**/*.html");
+const app = new Application(lib, "Demo", { minify: true });
 
-application.on("render", (output: string) => {
+app.on("output", (output: string) => {
     console.log(output);
 });
