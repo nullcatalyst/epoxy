@@ -11,6 +11,7 @@ export interface ApplicationOptions {
     output?: string; // default: <no output>
     minify?: boolean; // default: false
     doctype?: boolean; // default: true
+    data?: any; // default: {}
 }
 
 export class Application extends EventEmitter {
@@ -26,6 +27,7 @@ export class Application extends EventEmitter {
         options.escape = options.escape || escapeXml;
         options.minify = options.minify || false;
         options.doctype = options.doctype !== false;
+        options.data = options.data || {};
 
         this._library = library;
         this._fileName = fileName;
@@ -38,7 +40,7 @@ export class Application extends EventEmitter {
             let style  = "";
             let script = "";
 
-            let output = insert(this._name, {});
+            let output = insert(this._name, options!.data!);
             output = output.replace("</Styles/>", "<style>" + style + "</style>");
             output = output.replace("</Scripts/>", "<script>" + script + "</script>");
 

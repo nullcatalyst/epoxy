@@ -1,4 +1,4 @@
-import { Parser, ParserDelegate, Tag } from "./parser";
+import { Parser, ParserDelegate } from "./parser";
 import { escapeNone, escapeXml, escapeTmpl } from "./escape";
 
 const VALUE_OPEN    = "{{";
@@ -20,48 +20,46 @@ export class TemplateDelegate implements ParserDelegate {
         this._parsed    = "var $buf=[];with($locals=$locals||{}){$buf.push(`";
     }
 
+    onError(parser: Parser, error: Error): void {
+
+    }
+
     onText(parser: Parser, text: string): void {
         if (!this._ignore) {
             this._parsed += this.parseText(text, escapeNone);
         }
     }
 
-    onOpenTag(parser: Parser, tag: Tag): void {
+    onOpenTag(parser: Parser, tagName: string, attributes: MapLike<string>): void {
+        // console.log("OPENTAG:", tagName);
+
         ++this._stack;
 
         if (this._stack > 1) {
-            this._closeTag = !tag.isSelfClosing;
-
-            const c = tag.name.charAt(0);
+            const c = tagName.charAt(0);
             if (c != c.toUpperCase()) {
-                let text = "<" + escapeXml(tag.name);
+                let text = "<" + escapeXml(tagName);
 
-                for (let attribute in tag.attributes) {
-                    text += " " + escapeTmpl(escapeXml(attribute)) + "=\"" + this.parseText(tag.attributes[attribute], escapeXml) + "\"";
+                for (let attribute in attributes) {
+                    text += " " + escapeTmpl(escapeXml(attribute)) + "=\"" + this.parseText(attributes[attribute], escapeXml) + "\"";
                 }
 
-                if (tag.isSelfClosing) {
-                    text += "/>";
-                } else {
-                    text += ">";
-                }
-
-                this._parsed += text;
+                this._parsed += text + ">";
             } else {
-                if (tag.name === "Styles") {
+                if (tagName === "Styles") {
                     this._ignore = true;
                     this._parsed += "</Styles/>";
-                } else if (tag.name === "Scripts") {
+                } else if (tagName === "Scripts") {
                     this._ignore = true;
                     this._parsed += "</Scripts/>";
-                } else if (tag.name === "Children") {
+                } else if (tagName === "Children") {
                     this._ignore = true;
                     this._parsed += "`,$children(),`";
                 } else {
-                    this._parsed += "`,$ins(`" + escapeTmpl(tag.name) + "`,{";
+                    this._parsed += "`,$ins(`" + escapeTmpl(tagName) + "`,{";
 
-                    for (let attribute in tag.attributes) {
-                        this._parsed += "[`" + escapeTmpl(attribute) + "`]:" + this.parseAttribute(tag.attributes[attribute]) + ",";
+                    for (let attribute in attributes) {
+                        this._parsed += this.parseAttribute(attribute, attributes[attribute]);
                     }
 
                     this._parsed += "[`$children`]:function(){var $buf=[];$buf.push(`";
@@ -71,6 +69,8 @@ export class TemplateDelegate implements ParserDelegate {
     }
 
     onCloseTag(parser: Parser, tagName: string): void {
+        // console.log("CLOSETAG:", tagName);
+
         if (this._stack > 1) {
             const c = tagName.charAt(0);
             if (c != c.toUpperCase()) {
@@ -139,14 +139,22 @@ export class TemplateDelegate implements ParserDelegate {
         }
     }
 
-    private parseAttribute(text: string): string {
+    private parseAttribute(name: string, value: string): string {
+        if (isStringSurrounded(name, VALUE_OPEN, VALUE_CLOSE) && value === "") {
+            return "..." + name.slice(VALUE_OPEN.length, -VALUE_CLOSE.length) + ",";
+        }
+
+        return "[`" + escapeTmpl(name) + "`]:" + this.parseAttributeValue(value) + ","
+    }
+
+    private parseAttributeValue(text: string): string {
         const length    = text.length;
         let position    = 0;
         let nextValue   = nextIndexOf(VALUE_OPEN);
         let result      = "";
 
         // Special case -> passing (only) a value
-        if (nextValue === 0 && nextIndexOf(VALUE_CLOSE) === length - VALUE_CLOSE.length) {
+        if (isStringSurrounded(text, VALUE_OPEN, VALUE_CLOSE)) {
             return "(" + text.slice(VALUE_OPEN.length, -VALUE_CLOSE.length) + ")";
         }
 
@@ -169,4 +177,8 @@ export class TemplateDelegate implements ParserDelegate {
             return result < 0 ? length : result;
         }
     }
+}
+
+function isStringSurrounded(test: string, prefix: string, postfix: string): boolean {
+    return test.startsWith(prefix) && test.endsWith(postfix);
 }

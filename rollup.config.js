@@ -27,6 +27,7 @@ const external = [
     "chokidar",
     "globby",
     "html-minifier",
+    "htmlparser2",
     "sax",
 ];
 
@@ -41,6 +42,7 @@ const globals = {
     "chokidar": "require('chokidar')",
     "globby": "require('globby')",
     "html-minifier": "require('html-minifier')",
+    "htmlparser2": "require('htmlparser2')",
     "sax": "require('sax')",
 };
 

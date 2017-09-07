@@ -2,7 +2,7 @@
   "name": "epoxy",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "./lib.js",
   "scripts": {
     "start": "node main.js",
     "build": "rollup -c",
@@ -16,7 +16,7 @@
     "chokidar": "^1.7.0",
     "globby": "^6.1.0",
     "html-minifier": "^3.5.3",
-    "sax": "^1.2.4",
+    "htmlparser2": "^3.9.2",
     "typescript": "^2.5.2"
   },
   "devDependencies": {
@@ -24,9 +24,9 @@
     "@types/chokidar": "^1.7.2",
     "@types/globby": "^6.1.0",
     "@types/html-minifier": "^1.1.30",
+    "@types/htmlparser2": "^3.7.30",
     "@types/mocha": "^2.2.42",
     "@types/node": "^8.0.26",
-    "@types/sax": "^1.0.0",
     "mocha": "^3.5.0",
     "rollup": "^0.49.2",
     "rollup-plugin-node-resolve": "^3.0.0",

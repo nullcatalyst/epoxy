@@ -2,8 +2,13 @@
     "watch": "test/templates/**/*.html",
     "files": [
         {
+            "minify": true,
             "entry": "demo.html",
-            "output": "test.html"
+            "data": {
+                "title": "Demo",
+                "keywords": ["demo", "test"],
+                "description": "desc"
+            }
         }
     ]
 }

@@ -27,7 +27,6 @@ Currently, the goal is to start by creating a tool that makes it very easy to cr
         </head>
         <body>
 
-            
             <!-- Insert the combined scripts here -->
             <Scripts />
         </body>

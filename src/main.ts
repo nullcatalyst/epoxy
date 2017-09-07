@@ -29,10 +29,16 @@ if (!config.files) {
 
 let files = Array.isArray(config.files) ? config.files : [config.files];
 let lib = new Library(config.watch || "**/*.html", { watch: !!config.watch });
+
 let apps = files.map((file: ConfigFile) => {
-    const app = new Application(lib, file.entry, { minify: !!file.minify });
+    const app = new Application(lib, file.entry, {
+        minify: !!file.minify,
+        data: file.data,
+    });
 
     app.on("output", (output: string) => {
+        console.log("OUTPUT");
+
         if (file.output) {
             fs.writeFile(file.output, output, { encoding: "utf8" }, (error: Error) => {
                 if (error) {

@@ -1,4 +1,4 @@
-import { Parser, ParserDelegate, Tag } from "./parser";
+import { Parser, ParserDelegate } from "./parser";
 
 export class StyleDelegate implements ParserDelegate {
     private _stack: number;
@@ -9,7 +9,11 @@ export class StyleDelegate implements ParserDelegate {
         this._contents  = "";
     }
 
-    onText(parser: Parser, text: string) {
+    onError(parser: Parser, error: Error): void {
+
+    }
+
+    onText(parser: Parser, text: string): void {
         if (this._stack != 1) {
             return;
         }
@@ -17,11 +21,11 @@ export class StyleDelegate implements ParserDelegate {
         this._contents += text;
     }
 
-    onOpenTag(parser: Parser, tag: Tag) {
+    onOpenTag(parser: Parser, tagName: string, attributes: MapLike<string>): void {
         ++this._stack;
     }
 
-    onCloseTag(parser: Parser, tagName: string) {
+    onCloseTag(parser: Parser, tagName: string): void {
         --this._stack;
         if (this._stack == 0) {
             parser.appendStyle(this._contents);

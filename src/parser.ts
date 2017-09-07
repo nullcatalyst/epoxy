@@ -1,16 +1,15 @@
 import * as fs from "fs";
 import * as path from "path";
-import * as sax from "sax";
+import * as html from "htmlparser2";
 import * as Promise from "bluebird";
 import { Module } from "./module";
 import { Library } from "./library";
 
-export type Tag = sax.Tag;
-
 export interface ParserDelegate {
-    onText(parser: Parser, text: string);
-    onOpenTag(parser: Parser, tag: sax.Tag);
-    onCloseTag(parser: Parser, tagName: string);
+    onError(parser: Parser, error: Error): void;
+    onText(parser: Parser, text: string): void;
+    onOpenTag(parser: Parser, tagName: string, attributes: MapLike<string>): void;
+    onCloseTag(parser: Parser, tagName: string): void;
 }
 
 export interface ParserDelegateClass {
@@ -35,35 +34,41 @@ export class Parser {
         this._template = null;
 
         this._promise = new Promise((resolve, reject) => {
-            const parser = sax.createStream(true, {
-                trim:       false,  // Whether or not to trim text and comment nodes
-                normalize:  false,  // If true, then turn any whitespace into a single space
-                lowercase:  false,  // If true, then lowercase tag names and attribute names in loose mode, rather than uppercasing them
-                xmlns:      false,  // If true, then namespaces are supported
-                position:   true,   // If false, then don't track line/col/position
-                // strictEntities: false, // If true, only parse predefined XML entities (&amp;, &apos;, &gt;, &lt;, and &quot;)
+            const parser = new html.Parser({
+                onerror: (error: Error): void => {
+                    this.onError(error);
+                    reject(error);
+                },
+                onopentag: (tagName: string, attributes: MapLike<string>): void => {
+                    this.onOpenTag(tagName, attributes);
+                },
+                onclosetag: (tagName: string): void => {
+                    this.onCloseTag(tagName);
+                },
+                ontext: (text: string): void => {
+                    this.onText(text);
+                },
+                onend: (): void => {
+                    this.onEnd();
+                    resolve(new Module(fileName, this._style, this._script, this._template || noop));
+                },
+            }, {
+                xmlMode:                    false,
+                decodeEntities:             false,
+                lowerCaseTags:              false,
+                lowerCaseAttributeNames:    false,
             });
 
-            parser.on("error",      (error: Error)      => { this.onError(error); reject(error); });
-            parser.on("opentag",    (tag: sax.Tag)      => this.onOpenTag(tag)      );
-            parser.on("closetag",   (tagName: string)   => this.onCloseTag(tagName) );
-            parser.on("text",       (text: string)      => this.onText(text)        );
-            parser.on("end",        ()                  => { this.onEnd(); resolve(new Module(fileName, this._style, this._script, this._template || noop)); });
-
-            const file = fs.createReadStream(path.resolve(fileName));
-
-            // Write the root tag to the parser
-            parser.write("<root>", "utf8");
-
-            // When the file is closed (after being read), postfix the closing root tag
-            file.on("close", function () {
-                // End the root tag
-                parser.write("</root>", "utf8");
-                parser.end();
-            });
-
-            // Pipe the contents of the file through the parser
-            file.pipe(parser, { end: false });
+            const file = fs.createReadStream(path.resolve(fileName))
+                .on("error", (error: Error) => {
+                    reject(error);
+                })
+                .on("data", (data: string) => {
+                    parser.write(data);
+                })
+                .on("close", () => {
+                    parser.end();
+                });
         });
     }
 
@@ -98,7 +103,10 @@ export class Parser {
 
     protected onError(error: Error): void {
         console.error(error);
-        process.exit();
+
+        if (this._delegate) {
+            this._delegate.onError(this, error);
+        }
     }
 
     protected onText(text: string): void {
@@ -111,15 +119,15 @@ export class Parser {
         }
     }
 
-    protected onOpenTag(tag: sax.Tag): void {
+    protected onOpenTag(tagName: string, attributes: MapLike<string>): void {
         if (!this._delegate) {
-            if (tag.name in this._delegates) {
-                this._delegate = new this._delegates[tag.name]();
+            if (tagName in this._delegates) {
+                this._delegate = new this._delegates[tagName]();
             }
         }
 
         if (this._delegate) {
-            this._delegate.onOpenTag(this, tag);
+            this._delegate.onOpenTag(this, tagName, attributes);
         }
     }
 
