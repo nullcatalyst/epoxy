@@ -45,15 +45,6 @@ export class Library extends EventEmitter {
                 renderFns[name] = module.template.bind(null, $esc, $ins) as RenderFunction;
             });
 
-        // Add custom handlers
-        this.addCustomHandlers(renderFns);
-
         return renderFns;
-    }
-
-    addCustomHandlers(renderFns: MapLike<RenderFunction>): void {
-        renderFns["Styles"]     = () => "";
-        renderFns["Scripts"]    = () => "";
-        renderFns["Children"]   = () => "";
     }
 }

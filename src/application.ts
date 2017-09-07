@@ -17,20 +17,29 @@ export class Application extends EventEmitter {
         this._name = Module.fileNameToModuleName(fileName);
 
         const update = () => {
-            const renderFunctions = this._library.getRenderFunctions($esc, insert);
+            const renderFns = this._library.getRenderFunctions($esc, insert);
+            renderFns["Styles"]     = () => "";
+            renderFns["Scripts"]    = () => "";
+
 
             this.emit("render", insert(this._name, {}));
 
-            function insert(name: string, locals: any): string {
-                const render = renderFunctions[name];
+            function insert($name: string, $locals: any): string {
+                const render = renderFns[$name];
                 if (!render) {
                     throw new Error();
                 }
 
-                return render(locals);
+                return render($locals);
             }
         };
 
         library.on("parse", update);
+    }
+
+    addCustomHandlers(renderFns: MapLike<RenderFunction>): void {
+        renderFns["Styles"]     = () => "";
+        renderFns["Scripts"]    = () => "";
+        renderFns["Children"]   = () => "";
     }
 }

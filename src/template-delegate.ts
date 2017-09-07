@@ -9,17 +9,21 @@ const CONTROL_CLOSE = "#}";
 export class TemplateDelegate implements ParserDelegate {
     private _stack: number;
     private _closeTag: boolean;
+    private _ignore: boolean;
     private _contents: string;
     private _parsed: string;
 
     constructor() {
         this._stack     = 0;
         this._closeTag  = true;
+        this._ignore    = false;
         this._parsed    = "var $buf=[];with($locals=$locals||{}){$buf.push(`";
     }
 
     onText(parser: Parser, text: string): void {
-        this._parsed += this.parseText(text, escapeNone);
+        if (!this._ignore) {
+            this._parsed += this.parseText(text, escapeNone);
+        }
     }
 
     onOpenTag(parser: Parser, tag: Tag): void {
@@ -44,22 +48,37 @@ export class TemplateDelegate implements ParserDelegate {
 
                 this._parsed += text;
             } else {
-                this._parsed += "`,$ins(`" + escapeTmpl(tag.name) + "`,{";
+                if (tag.name === "Children") {
+                    this._ignore = true;
+                    this._parsed += "`,$children(),`";
+                } else {
+                    this._parsed += "`,$ins(`" + escapeTmpl(tag.name) + "`,{";
 
-                for (let attribute in tag.attributes) {
-                    this._parsed += "[`" + escapeTmpl(attribute) + "`]:`" + this.parseAttribute(tag.attributes[attribute]) + "`,";
+                    for (let attribute in tag.attributes) {
+                        this._parsed += "[`" + escapeTmpl(attribute) + "`]:`" + this.parseAttribute(tag.attributes[attribute]) + "`,";
+                    }
+
+                    this._parsed += "[`$children`]:function(){var $buf=[];$buf.push(`";
                 }
-
-                this._parsed += "}),`";
             }
         }
     }
 
     onCloseTag(parser: Parser, tagName: string): void {
         if (this._stack > 1) {
-            if (this._closeTag) {
-                this._parsed += "</" + escapeXml(tagName) + ">";
+            const c = tagName.charAt(0);
+            if (c != c.toUpperCase()) {
+                if (this._closeTag) {
+                    this._parsed += "</" + escapeXml(tagName) + ">";
+                }
+            } else {
+                if (tagName === "Children") {
+                    this._ignore = false;
+                } else {
+                    this._parsed += "`);return $buf.join(``);}}),`";
+                }
             }
+
             this._closeTag = true;
         }
 
@@ -67,6 +86,7 @@ export class TemplateDelegate implements ParserDelegate {
         if (this._stack == 0) {
             this._parsed += "`)}return $buf.join(``);";
 
+            console.log("TEMPLATE:", this._parsed)
             parser.appendTemplate(new Function("$esc", "$ins", "$locals", this._parsed) as TemplateFunction);
             parser.changeDelegate(null);
         }
