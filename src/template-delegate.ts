@@ -48,14 +48,20 @@ export class TemplateDelegate implements ParserDelegate {
 
                 this._parsed += text;
             } else {
-                if (tag.name === "Children") {
+                if (tag.name === "Styles") {
+                    this._ignore = true;
+                    this._parsed += "</Styles/>";
+                } else if (tag.name === "Scripts") {
+                    this._ignore = true;
+                    this._parsed += "</Scripts/>";
+                } else if (tag.name === "Children") {
                     this._ignore = true;
                     this._parsed += "`,$children(),`";
                 } else {
                     this._parsed += "`,$ins(`" + escapeTmpl(tag.name) + "`,{";
 
                     for (let attribute in tag.attributes) {
-                        this._parsed += "[`" + escapeTmpl(attribute) + "`]:`" + this.parseAttribute(tag.attributes[attribute]) + "`,";
+                        this._parsed += "[`" + escapeTmpl(attribute) + "`]:" + this.parseAttribute(tag.attributes[attribute]) + ",";
                     }
 
                     this._parsed += "[`$children`]:function(){var $buf=[];$buf.push(`";
@@ -72,7 +78,11 @@ export class TemplateDelegate implements ParserDelegate {
                     this._parsed += "</" + escapeXml(tagName) + ">";
                 }
             } else {
-                if (tagName === "Children") {
+                if (tagName === "Styles") {
+                    this._ignore = false;
+                } else if (tagName === "Scripts") {
+                    this._ignore = false;
+                } else if (tagName === "Children") {
                     this._ignore = false;
                 } else {
                     this._parsed += "`);return $buf.join(``);}}),`";
@@ -86,7 +96,8 @@ export class TemplateDelegate implements ParserDelegate {
         if (this._stack == 0) {
             this._parsed += "`)}return $buf.join(``);";
 
-            console.log("TEMPLATE:", this._parsed)
+            // console.log("TEMPLATE:", this._parsed);
+            console.log();
             parser.appendTemplate(new Function("$esc", "$ins", "$locals", this._parsed) as TemplateFunction);
             parser.changeDelegate(null);
         }
@@ -136,6 +147,11 @@ export class TemplateDelegate implements ParserDelegate {
         let nextValue   = nextIndexOf(VALUE_OPEN);
         let result      = "";
 
+        // Special case -> passing (only) a value
+        if (nextValue === 0 && nextIndexOf(VALUE_CLOSE) === length - VALUE_CLOSE.length) {
+            return "(" + text.slice(VALUE_OPEN.length, -VALUE_CLOSE.length) + ")";
+        }
+
         while (nextValue < length) {
             result += escapeTmpl(escapeXml(text.slice(position, nextValue)));
             position = nextValue + VALUE_OPEN.length;
@@ -148,7 +164,7 @@ export class TemplateDelegate implements ParserDelegate {
         }
 
         result += escapeTmpl(text.slice(position));
-        return result;
+        return "`" + result + "`";
 
         function nextIndexOf(substring: string): number {
             const result = text.indexOf(substring, position);

@@ -18,16 +18,24 @@ export class Application extends EventEmitter {
 
         const update = () => {
             const renderFns = this._library.getRenderFunctions($esc, insert);
-            renderFns["Styles"]     = () => "";
-            renderFns["Scripts"]    = () => "";
+            const included: MapLike<boolean> = {};
 
+            let style  = "";
+            let script = "";
 
-            this.emit("render", insert(this._name, {}));
+            let result = insert(this._name, {});
+            result = result.replace("</Styles/>", "<style>" + style + "</style>");
+            result = result.replace("</Scripts/>", "<script>" + script + "</script>");
+
+            this.emit("render", result);
 
             function insert($name: string, $locals: any): string {
-                const render = renderFns[$name];
-                if (!render) {
-                    throw new Error();
+                const [module, render] = renderFns[$name];
+
+                if (!included[$name]) {
+                    included[$name] = true;
+                    style  += module.style;
+                    script += module.script;
                 }
 
                 return render($locals);

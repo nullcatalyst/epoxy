@@ -37,12 +37,12 @@ export class Library extends EventEmitter {
             });
     }
 
-    getRenderFunctions($esc: EscapeFunction, $ins: InsertFunction, addHandlers?: boolean): MapLike<RenderFunction> {
-        const renderFns: MapLike<RenderFunction> = {};
+    getRenderFunctions($esc: EscapeFunction, $ins: InsertFunction, addHandlers?: boolean): MapLike<[Module, RenderFunction]> {
+        const renderFns: MapLike<[Module, RenderFunction]> = {};
 
         Object.entries(this._modules)
             .forEach(([name, module]) => {
-                renderFns[name] = module.template.bind(null, $esc, $ins) as RenderFunction;
+                renderFns[name] = [module, module.template.bind(null, $esc, $ins) as RenderFunction];
             });
 
         return renderFns;
