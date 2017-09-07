@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-"use strict";const{Library:t,Application:e}=require("./lib"),i=new t(["test/**/*.html"],{watch:!0}),o=new e(i,"Demo",{minify:!0});o.on("output",t=>{console.log(t)});
+"use strict";var e=require("fs"),r=require("path");const{Library:t,Application:i,Module:o}=require("./lib"),s=process.argv,n=s.length,l=2===n?r.resolve("epoxy.config.json"):r.resolve(s[2]),u=require(l);u.files||process.exit();let c=Array.isArray(u.files)?u.files:[u.files],a=new t(u.watch||"**/*.html",{watch:!!u.watch}),p=c.map(r=>{const t=new i(a,r.entry,{minify:!!r.minify});return t.on("output",t=>{r.output?e.writeFile(r.output,t,{encoding:"utf8"},e=>{e&&console.error(e)}):console.log(r.entry,"->",t)}),t});

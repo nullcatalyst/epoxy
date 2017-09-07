@@ -2,6 +2,7 @@ import * as EventEmitter from "events";
 import * as Promise from "bluebird";
 import * as chokidar from "chokidar";
 import globby from "globby";
+import { file2tag } from "./util";
 import { Module } from "./module";
 import { Parser } from "./parser";
 import { DefaultParser } from "./default-parser";
@@ -67,7 +68,7 @@ export class Library extends EventEmitter implements LibraryEvents {
                     };
 
                     const remove = (fileName: string) => {
-                        delete this._modules[Module.fileNameToModuleName(fileName)];
+                        delete this._modules[file2tag(fileName)];
                     };
 
                     this._watcher = chokidar.watch(pattern, { ignoreInitial: true })

@@ -38,7 +38,3 @@ const TMPL_XML = {
 export function escapeTmplXml(value: any): string {
     return String(value).replace(/[&"<>\'`\\$]/g, (c: string) => (c in TMPL_XML ? TMPL_XML[c] : c));
 }
-
-export function dashCamel(value: any): string {
-    return String(value).replace(/(^|-)(\w|$)/g, (full: string, dash: string, c: string) => c.toUpperCase());
-}

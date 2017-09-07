@@ -2,6 +2,7 @@ import * as EventEmitter from "events";
 import * as Promise from "bluebird";
 import * as htmlmin from "html-minifier";
 import { escapeXml } from "./escape";
+import { file2tag } from "./util";
 import { Library } from "./library";
 import { Module } from "./module";
 
@@ -28,7 +29,7 @@ export class Application extends EventEmitter {
 
         this._library = library;
         this._fileName = fileName;
-        this._name = Module.fileNameToModuleName(fileName);
+        this._name = file2tag(fileName);
 
         const update = () => {
             const renderFns = this._library.getRenderFunctions(options!.escape!, insert);
@@ -80,5 +81,12 @@ export class Application extends EventEmitter {
 
         library.on("done", update)
             .on("update", update);
+
+        this.stop = () => {
+            library.removeListener("done", update)
+                .removeListener("update", update);
+        };
     }
+
+    readonly stop: () => void;
 }

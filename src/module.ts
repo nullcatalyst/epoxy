@@ -1,5 +1,6 @@
 import * as path from "path";
-import { escapeXml, dashCamel } from "./escape";
+import { escapeXml } from "./escape";
+import { file2tag } from "./util";
 
 export class Module {
     private _fileName: string;
@@ -9,13 +10,9 @@ export class Module {
     private _script: string;
     private _template: TemplateFunction;
 
-    static fileNameToModuleName(fileName: string): string {
-        return dashCamel(path.parse(fileName).name);
-    }
-
     constructor(fileName: string, style: string, script: string, template: TemplateFunction) {
         this._fileName = fileName;
-        this._name = Module.fileNameToModuleName(fileName);
+        this._name = file2tag(fileName);
 
         this._style = style;
         this._script = script;

@@ -1,0 +1,9 @@
+{
+    "watch": "test/templates/**/*.html",
+    "files": [
+        {
+            "entry": "demo.html",
+            "output": "test.html"
+        }
+    ]
+}
