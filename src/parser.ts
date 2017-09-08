@@ -39,7 +39,8 @@ export class Parser {
                     this.onError(error);
                     reject(error);
                 },
-                onopentag: (tagName: string, attributes: MapLike<string>): void => {
+                onopentag: (tagName: string, attributes: MapLike<string>, ...rest): void => {
+                    console.log(...rest);
                     this.onOpenTag(tagName, attributes);
                 },
                 onclosetag: (tagName: string): void => {
@@ -57,6 +58,8 @@ export class Parser {
                 decodeEntities:             false,
                 lowerCaseTags:              false,
                 lowerCaseAttributeNames:    false,
+                recognizeCDATA:             true,
+                recognizeSelfClosing:       true,
             });
 
             const file = fs.createReadStream(path.resolve(fileName))

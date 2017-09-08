@@ -2,14 +2,16 @@ import * as EventEmitter from "events";
 import * as Promise from "bluebird";
 import * as chokidar from "chokidar";
 import globby from "globby";
-import { file2tag } from "./util";
+import { toArray, file2tag } from "./util";
 import { Module } from "./module";
 import { Parser } from "./parser";
 import { DefaultParser } from "./default-parser";
 
 export interface LibraryOptions {
-    parser?: typeof Parser;
-    watch?: boolean; // Default false
+    parser: typeof Parser;
+    sources: string[];
+    watch: boolean;
+    config?: string | null;
 }
 
 interface LibraryEvents {
@@ -24,24 +26,39 @@ interface LibraryEvents {
 }
 
 export class Library extends EventEmitter implements LibraryEvents {
+    private _options: LibraryOptions;
     private _modules: MapLike<Module>;
     private _watcher: chokidar.FSWatcher | null;
+    private _configWatcher: chokidar.FSWatcher | null;
 
-    constructor(pattern: string | string[], options?: LibraryOptions) {
+    constructor(options?: Partial<LibraryOptions>) {
         super();
 
         // Set default options
-        options = options || {};
-        options.parser = options.parser || DefaultParser;
-        options.watch = options.watch || false;
-
+        this._options = this.getDefaultOptions(options);
         this._modules = {};
         this._watcher = null;
+        this._configWatcher = null;
 
-        globby(pattern)
+        this.start();
+    }
+
+    getDefaultOptions(options?: Partial<LibraryOptions>): LibraryOptions {
+        return {
+            parser:  options && options.parser  || DefaultParser,
+            sources: options && options.sources || [],
+            watch:   options && options.watch   || false,
+            config:  options && options.config  || null,
+        };
+    }
+
+    start(): void {
+        this.stop();
+
+        globby(this._options.sources)
             .then((files: string[]) => {
                 return Promise.all(files.map((filePath: string) => {
-                    const parser = new options!.parser!(this, filePath);
+                    const parser = new this._options.parser(this, filePath);
                     return parser.promise.catch((error: Error) => {
                         this.emit("error", error, filePath);
                     });
@@ -54,9 +71,9 @@ export class Library extends EventEmitter implements LibraryEvents {
 
                 this.emit("done");
 
-                if (options!.watch!) {
+                if (this._options.watch) {
                     const update = (fileName: string) => {
-                        const parser = new options!.parser!(this, fileName);
+                        const parser = new this._options.parser(this, fileName);
                         parser.promise
                             .then((module: Module) => {
                                 this._modules[module.name] = module;
@@ -71,10 +88,18 @@ export class Library extends EventEmitter implements LibraryEvents {
                         delete this._modules[file2tag(fileName)];
                     };
 
-                    this._watcher = chokidar.watch(pattern, { ignoreInitial: true })
+                    this._watcher = chokidar.watch(this._options.sources, { ignoreInitial: true })
                         .on("add", update)
                         .on("change", update)
                         .on("unlink", remove);
+
+                    if (this._options.config) {
+                        this._configWatcher = chokidar.watch(this._options.config, { ignoreInitial: true })
+                            .on("change", () => {
+                                this.emit("config"); this.stop();
+                            })
+                            .on("unlink", () => { this.stop() });
+                    }
                 }
             });
     }
@@ -94,6 +119,11 @@ export class Library extends EventEmitter implements LibraryEvents {
         if (this._watcher) {
             this._watcher.close();
             this._watcher = null;
+        }
+
+        if (this._configWatcher) {
+            this._configWatcher.close();
+            this._configWatcher = null;
         }
     }
 }

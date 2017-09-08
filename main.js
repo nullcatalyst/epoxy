@@ -1,2 +1,54 @@
 #!/usr/bin/env node
-"use strict";var e=require("fs"),r=require("path");const{Library:t,Application:o,Module:i}=require("./lib"),s=process.argv,n=s.length,l=2===n?r.resolve("epoxy.config.json"):r.resolve(s[2]),a=require(l);a.files||process.exit();let c=Array.isArray(a.files)?a.files:[a.files],u=new t(a.watch||"**/*.html",{watch:!!a.watch}),p=c.map(r=>{const t=new o(u,r.entry,{minify:!!r.minify,data:r.data});return t.on("output",t=>{console.log("OUTPUT"),r.output?e.writeFile(r.output,t,{encoding:"utf8"},e=>{e&&console.error(e)}):console.log(r.entry,"->",t)}),t});
+'use strict';
+
+var fs = require('fs');
+var path = require('path');
+
+const { Library, Application } = require("./lib");
+const argv = process.argv;
+const argc = argv.length;
+const configPath = path.resolve(argc === 2 ? "epoxy.config.json" : argv[2]);
+start();
+function start() {
+    const config = JSON.parse(fs.readFileSync(configPath, { encoding: "utf8" }));
+    if (!config.sources || !config.outputs) {
+        // There must be at least one output
+        process.exit();
+    }
+    let outputs = toArray(config.outputs);
+    let lib = new Library({
+        watch: !!config.watch,
+        sources: toArray(config.sources),
+        config: configPath,
+    });
+    let apps = outputs.map((output) => {
+        const app = new Application(lib, output.entry, {
+            minify: !!output.minify,
+            file: output.file,
+            data: output.data,
+        });
+        app.on("output", (result) => {
+            console.log("OUTPUT");
+            if (output.file) {
+                fs.writeFile(output.file, output, { encoding: "utf8" }, (error) => {
+                    if (error) {
+                        console.error(error);
+                    }
+                });
+            }
+            else {
+                console.log(output.entry, "->", result);
+            }
+        });
+        return app;
+    });
+    lib.on("config", () => {
+        apps.forEach((app) => {
+            app.stop();
+        });
+        start();
+    });
+}
+function toArray(value) {
+    return Array.isArray(value) ? value : [value];
+}

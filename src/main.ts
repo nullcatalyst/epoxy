@@ -1,54 +1,75 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as chokidar from "chokidar";
-const { Library, Application, Module } = require("./lib");
+const { Library, Application } = require("./lib");
 
 const argv = process.argv;
 const argc = argv.length;
 
-interface ConfigFile {
+interface ConfigOutput {
     entry: string;
-    output: string;
+    file: string;
     data?: any;
     minify?: boolean;
 }
 
 interface Config {
-    // watch?: boolean;
-    watch?: string | string[];
-    files: ConfigFile | ConfigFile[];
+    watch?: boolean;
+    sources: string | string[];
+    outputs: ConfigOutput | ConfigOutput[];
 }
 
-const configPath = argc === 2 ? path.resolve("epoxy.config.json") : path.resolve(argv[2]);
-const config: Config = require(configPath);
+const configPath = path.resolve(argc === 2 ? "epoxy.config.json" : argv[2]);
+start();
 
-if (!config.files) {
-    // There must be at least one output
-    process.exit();
+function start() {
+    const config: Config = JSON.parse(fs.readFileSync(configPath, { encoding: "utf8" }));
+
+    if (!config.sources || !config.outputs) {
+        // There must be at least one output
+        process.exit();
+    }
+
+    let outputs = toArray(config.outputs);
+    let lib = new Library({
+        watch: !!config.watch,
+        sources: toArray(config.sources),
+        config: configPath,
+    });
+
+    let apps = outputs.map((output: ConfigOutput) => {
+        const app = new Application(lib, output.entry, {
+            minify: !!output.minify,
+            file: output.file,
+            data: output.data,
+        });
+
+        app.on("output", (result: string) => {
+            console.log("OUTPUT");
+
+            if (output.file) {
+                fs.writeFile(output.file, output, { encoding: "utf8" }, (error: Error) => {
+                    if (error) {
+                        console.error(error);
+                    }
+                });
+            } else {
+                console.log(output.entry, "->", result);
+            }
+        });
+
+        return app;
+    });
+
+    lib.on("config", () => {
+        apps.forEach((app) => {
+            app.stop();
+        });
+
+        start();
+    });
 }
 
-let files = Array.isArray(config.files) ? config.files : [config.files];
-let lib = new Library(config.watch || "**/*.html", { watch: !!config.watch });
-
-let apps = files.map((file: ConfigFile) => {
-    const app = new Application(lib, file.entry, {
-        minify: !!file.minify,
-        data: file.data,
-    });
-
-    app.on("output", (output: string) => {
-        console.log("OUTPUT");
-
-        if (file.output) {
-            fs.writeFile(file.output, output, { encoding: "utf8" }, (error: Error) => {
-                if (error) {
-                    console.error(error);
-                }
-            });
-        } else {
-            console.log(file.entry, "->", output);
-        }
-    });
-
-    return app;
-});
+function toArray<T>(value: T | T[]): T[] {
+    return Array.isArray(value) ? value : [value];
+}

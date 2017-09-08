@@ -1,6 +1,7 @@
 {
-    "watch": "test/templates/**/*.html",
-    "files": [
+    "watch": true,
+    "sources": "test/templates/**/*.html",
+    "outputs": [
         {
             "minify": true,
             "entry": "demo.html",
