@@ -28,7 +28,7 @@ const external = [
     "globby",
     "html-minifier",
     "htmlparser2",
-    "sax",
+    "mkdirp",
 ];
 
 const globals = {
@@ -43,7 +43,7 @@ const globals = {
     "globby": "require('globby')",
     "html-minifier": "require('html-minifier')",
     "htmlparser2": "require('htmlparser2')",
-    "sax": "require('sax')",
+    "mkdirp": "require('mkdirp')",
 };
 
 export default [

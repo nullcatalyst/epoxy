@@ -17,6 +17,7 @@
     "globby": "^6.1.0",
     "html-minifier": "^3.5.3",
     "htmlparser2": "^3.9.2",
+    "mkdirp": "^0.5.1",
     "typescript": "^2.5.2"
   },
   "devDependencies": {
@@ -25,6 +26,7 @@
     "@types/globby": "^6.1.0",
     "@types/html-minifier": "^1.1.30",
     "@types/htmlparser2": "^3.7.30",
+    "@types/mkdirp": "^0.5.1",
     "@types/mocha": "^2.2.42",
     "@types/node": "^8.0.26",
     "mocha": "^3.5.0",

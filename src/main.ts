@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as chokidar from "chokidar";
+import mkdirp from "mkdirp";
 const { Library, Application } = require("./lib");
 
 const argv = process.argv;
@@ -47,10 +48,18 @@ function start() {
             // console.log("OUTPUT");
 
             if (output.file) {
-                fs.writeFile(output.file, output, { encoding: "utf8" }, (error: Error) => {
+                mkdirp(path.dirname(output.file), (error: Error, made: string) => {
                     if (error) {
-                        console.error(error);
+                        return console.error(error);
                     }
+
+                    fs.writeFile(output.file, result, { encoding: "utf8" }, (error: Error) => {
+                        if (error) {
+                            return console.error(error);
+                        }
+
+                        console.log("Output", output.file);
+                    });
                 });
             } else {
                 console.log("[" + output.entry + "]:")
