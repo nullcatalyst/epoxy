@@ -40,7 +40,6 @@ export class Parser {
                     reject(error);
                 },
                 onopentag: (tagName: string, attributes: MapLike<string>, ...rest): void => {
-                    console.log(...rest);
                     this.onOpenTag(tagName, attributes);
                 },
                 onclosetag: (tagName: string): void => {

@@ -31,7 +31,7 @@ export class TemplateDelegate implements ParserDelegate {
     }
 
     onOpenTag(parser: Parser, tagName: string, attributes: MapLike<string>): void {
-        console.log("OPENTAG:", tagName);
+        // console.log("OPENTAG:", tagName);
 
         ++this._stack;
 
@@ -69,7 +69,7 @@ export class TemplateDelegate implements ParserDelegate {
     }
 
     onCloseTag(parser: Parser, tagName: string): void {
-        console.log("CLOSETAG:", tagName);
+        // console.log("CLOSETAG:", tagName);
 
         if (this._stack > 1) {
             const c = tagName.charAt(0);
@@ -96,7 +96,7 @@ export class TemplateDelegate implements ParserDelegate {
         if (this._stack == 0) {
             this._parsed += "`)}return $buf.join(``);";
 
-            console.log("fn->", this._parsed);
+            // console.log("fn->", this._parsed);
             parser.appendTemplate(new Function("$esc", "$ins", "$locals", this._parsed) as TemplateFunction);
             parser.changeDelegate(null);
         }

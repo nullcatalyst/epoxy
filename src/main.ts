@@ -34,7 +34,6 @@ function start() {
     let lib = new Library({
         watch: !!config.watch,
         sources: toArray(config.sources),
-        config: configPath,
     });
 
     let apps = outputs.map((output: ConfigOutput) => {
@@ -45,7 +44,7 @@ function start() {
         });
 
         app.on("output", (result: string) => {
-            console.log("OUTPUT");
+            // console.log("OUTPUT");
 
             if (output.file) {
                 fs.writeFile(output.file, output, { encoding: "utf8" }, (error: Error) => {
@@ -54,20 +53,17 @@ function start() {
                     }
                 });
             } else {
-                console.log(output.entry, "->", result);
+                console.log("[" + output.entry + "]:")
+                console.log(result + "\n");
             }
         });
 
         return app;
     });
 
-    lib.on("config", () => {
-        apps.forEach((app) => {
-            app.stop();
-        });
-
-        start();
-    });
+    const watcher = chokidar.watch(configPath, { ignoreInitial: true })
+        .on("change", () => { watcher.close(); lib.stop(); start(); })
+        .on("unlink", () => { watcher.close(); lib.stop(); });
 }
 
 function toArray<T>(value: T | T[]): T[] {

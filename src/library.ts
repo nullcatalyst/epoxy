@@ -11,7 +11,6 @@ export interface LibraryOptions {
     parser: typeof Parser;
     sources: string[];
     watch: boolean;
-    config?: string | null;
 }
 
 interface LibraryEvents {
@@ -29,7 +28,6 @@ export class Library extends EventEmitter implements LibraryEvents {
     private _options: LibraryOptions;
     private _modules: MapLike<Module>;
     private _watcher: chokidar.FSWatcher | null;
-    private _configWatcher: chokidar.FSWatcher | null;
 
     constructor(options?: Partial<LibraryOptions>) {
         super();
@@ -38,7 +36,6 @@ export class Library extends EventEmitter implements LibraryEvents {
         this._options = this.getDefaultOptions(options);
         this._modules = {};
         this._watcher = null;
-        this._configWatcher = null;
 
         this.start();
     }
@@ -48,7 +45,6 @@ export class Library extends EventEmitter implements LibraryEvents {
             parser:  options && options.parser  || DefaultParser,
             sources: options && options.sources || [],
             watch:   options && options.watch   || false,
-            config:  options && options.config  || null,
         };
     }
 
@@ -92,14 +88,6 @@ export class Library extends EventEmitter implements LibraryEvents {
                         .on("add", update)
                         .on("change", update)
                         .on("unlink", remove);
-
-                    if (this._options.config) {
-                        this._configWatcher = chokidar.watch(this._options.config, { ignoreInitial: true })
-                            .on("change", () => {
-                                this.emit("config"); this.stop();
-                            })
-                            .on("unlink", () => { this.stop() });
-                    }
                 }
             });
     }
@@ -119,11 +107,6 @@ export class Library extends EventEmitter implements LibraryEvents {
         if (this._watcher) {
             this._watcher.close();
             this._watcher = null;
-        }
-
-        if (this._configWatcher) {
-            this._configWatcher.close();
-            this._configWatcher = null;
         }
     }
 }
