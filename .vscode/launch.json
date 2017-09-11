@@ -10,7 +10,7 @@
             "name": "Launch Program",
             "program": "${workspaceRoot}/main.js",
             "args": [
-                "test/epoxy.config.json"
+                "test/epoxy.config.js"
             ]
         }
     ]

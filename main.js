@@ -1,2 +1,63 @@
 #!/usr/bin/env node
-"use strict";function e(e){return e&&"object"==typeof e&&"default"in e?e.default:e}function r(){delete require.cache[p];const e=require(p);e.sources&&e.outputs||process.exit();let l=o(e.outputs),a=new s({watch:!!e.watch,sources:o(e.sources)});l.map(e=>{const r=new u(a,e.entry,{minify:!!e.minify,file:e.file,data:e.data});return r.on("output",r=>{e.file?c(n.dirname(e.file),(o,n)=>{if(o)return console.error(o);t.writeFile(e.file,r,{encoding:"utf8"},r=>{if(r)return console.error(r);console.log("Output",e.file)})}):(console.log("["+e.entry+"]:"),console.log(r+"\n"))}),r});const f=i.watch(p,{ignoreInitial:!0}).on("change",()=>{f.close(),a.stop(),r()}).on("unlink",()=>{f.close(),a.stop()})}function o(e){return Array.isArray(e)?e:[e]}var t=require("fs"),n=require("path"),i=require("chokidar"),c=e(require("mkdirp"));const{Library:s,Application:u}=require("./lib"),l=process.argv,a=l.length,f="epoxy.config.js",p=n.resolve(2===a?"epoxy.config.js":l[2]);r();
+'use strict';
+
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
+var fs = require('fs');
+var path = require('path');
+var chokidar = require('chokidar');
+var mkdirp = _interopDefault(require('mkdirp'));
+
+const { Library, Application } = require("./lib");
+const argv = process.argv;
+const argc = argv.length;
+const DEFAULT_CONFIG_FILE = "epoxy.config.js";
+const configPath = path.resolve(argc === 2 ? DEFAULT_CONFIG_FILE : argv[2]);
+start();
+function start() {
+    delete require.cache[configPath];
+    const config = require(configPath);
+    if (!config.sources || !config.outputs) {
+        // There must be at least one output
+        process.exit();
+    }
+    let outputs = toArray(config.outputs);
+    let lib = new Library({
+        watch: !!config.watch,
+        sources: toArray(config.sources),
+    });
+    let apps = outputs.map((output) => {
+        const app = new Application(lib, output.entry, {
+            minify: !!output.minify,
+            file: output.file,
+            data: output.data,
+        });
+        app.on("output", (result) => {
+            // console.log("OUTPUT");
+            if (output.file) {
+                mkdirp(path.dirname(output.file), (error, made) => {
+                    if (error) {
+                        return console.error(error);
+                    }
+                    fs.writeFile(output.file, result, { encoding: "utf8" }, (error) => {
+                        if (error) {
+                            return console.error(error);
+                        }
+                        console.log("Output", output.file);
+                    });
+                });
+            }
+            else {
+                console.log("[" + output.entry + "]:");
+                console.log(result + "\n");
+            }
+        });
+        return app;
+    });
+    const watcher = chokidar.watch(configPath, { ignoreInitial: true })
+        .on("change", () => { watcher.close(); lib.stop(); start(); })
+        .on("unlink", () => { watcher.close(); lib.stop(); });
+}
+function toArray(value) {
+    return Array.isArray(value) ? value : [value];
+}
