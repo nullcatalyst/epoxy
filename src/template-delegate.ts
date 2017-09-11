@@ -47,11 +47,29 @@ export class TemplateDelegate implements ParserDelegate {
                 this._parsed += text + ">";
             } else {
                 if (tagName === "Styles") {
+                    let styleAttributes = "";
+                    for (let attribute in attributes) {
+                        styleAttributes += " " + attribute;
+
+                        if (attributes[attribute]) {
+                            styleAttributes += "=\"" + attributes[attribute] + "\"";
+                        }
+                    }
+
                     this._ignore = true;
-                    this._parsed += "</Styles/>";
+                    this._parsed += "</Styles" + styleAttributes + "/>";
                 } else if (tagName === "Scripts") {
+                    let scriptAttributes = "";
+                    for (let attribute in attributes) {
+                        scriptAttributes += " " + attribute;
+
+                        if (attributes[attribute]) {
+                            scriptAttributes += "=\"" + attributes[attribute] + "\"";
+                        }
+                    }
+
                     this._ignore = true;
-                    this._parsed += "</Scripts/>";
+                    this._parsed += "</Scripts" + scriptAttributes + "/>";
                 } else if (tagName === "Children") {
                     this._ignore = true;
                     this._parsed += "`,$children(),`";
