@@ -1,4 +1,4 @@
-{
+module.exports = {
     "watch": true,
     "sources": "test/templates/**/*.html",
     "outputs": [
@@ -8,8 +8,8 @@
             "data": {
                 "title": "Demo",
                 "keywords": ["demo", "test"],
-                "description": "desc"
+                "description": "description"
             }
         }
     ]
-}
+};

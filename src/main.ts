@@ -20,11 +20,13 @@ interface Config {
     outputs: ConfigOutput | ConfigOutput[];
 }
 
-const configPath = path.resolve(argc === 2 ? "epoxy.config.json" : argv[2]);
+const DEFAULT_CONFIG_FILE = "epoxy.config.js";
+const configPath = path.resolve(argc === 2 ? DEFAULT_CONFIG_FILE : argv[2]);
 start();
 
 function start() {
-    const config: Config = JSON.parse(fs.readFileSync(configPath, { encoding: "utf8" }));
+    delete require.cache[configPath];
+    const config: Config = require(configPath);
 
     if (!config.sources || !config.outputs) {
         // There must be at least one output
