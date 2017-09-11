@@ -37,6 +37,7 @@ export class Library extends EventEmitter implements LibraryEvents {
         this._modules = {};
         this._watcher = null;
 
+        this.setMaxListeners(Infinity);
         this.start();
     }
 
@@ -87,7 +88,8 @@ export class Library extends EventEmitter implements LibraryEvents {
                     this._watcher = chokidar.watch(this._options.sources, { ignoreInitial: true })
                         .on("add", update)
                         .on("change", update)
-                        .on("unlink", remove);
+                        .on("unlink", remove)
+                        .setMaxListeners(Infinity);
                 }
             });
     }
