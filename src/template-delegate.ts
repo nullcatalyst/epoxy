@@ -41,35 +41,21 @@ export class TemplateDelegate implements ParserDelegate {
                 let text = "<" + escapeXml(tagName);
 
                 for (let attribute in attributes) {
-                    text += " " + escapeTmpl(escapeXml(attribute)) + "=\"" + this.parseText(attributes[attribute], escapeXml) + "\"";
+                    text += " " + escapeTmpl(escapeXml(attribute));
+
+                    if (attributes[attribute]) {
+                        text += "=\"" + this.parseText(attributes[attribute], escapeXml) + "\"";
+                    }
                 }
 
                 this._parsed += text + ">";
             } else {
                 if (tagName === "Styles") {
-                    let styleAttributes = "";
-                    for (let attribute in attributes) {
-                        styleAttributes += " " + attribute;
-
-                        if (attributes[attribute]) {
-                            styleAttributes += "=\"" + attributes[attribute] + "\"";
-                        }
-                    }
-
                     this._ignore = true;
-                    this._parsed += "</Styles" + styleAttributes + "/>";
+                    this._parsed += "</Styles" + toAttributeString(attributes) + "/>";
                 } else if (tagName === "Scripts") {
-                    let scriptAttributes = "";
-                    for (let attribute in attributes) {
-                        scriptAttributes += " " + attribute;
-
-                        if (attributes[attribute]) {
-                            scriptAttributes += "=\"" + attributes[attribute] + "\"";
-                        }
-                    }
-
                     this._ignore = true;
-                    this._parsed += "</Scripts" + scriptAttributes + "/>";
+                    this._parsed += "</Scripts" + toAttributeString(attributes) + "/>";
                 } else if (tagName === "Children") {
                     this._ignore = true;
                     this._parsed += "`,$children(),`";
@@ -200,4 +186,20 @@ export class TemplateDelegate implements ParserDelegate {
 
 function isStringSurrounded(test: string, prefix: string, postfix: string): boolean {
     return test.startsWith(prefix) && test.endsWith(postfix);
+}
+
+function toAttributeString(attributes: MapLike<string>): string {
+    let result = "";
+
+    if (attributes) {
+        for (let attribute in attributes) {
+            result += " " + attribute;
+    
+            if (attributes[attribute]) {
+                result += "=\"" + attributes[attribute] + "\"";
+            }
+        }
+    }
+
+    return result;
 }
