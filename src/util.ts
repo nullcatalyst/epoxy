@@ -1,5 +1,9 @@
 import * as path from "path";
 
+export function noop() {}
+
+export function emptyString() { return ""; }
+
 export function toArray<T>(value: T | T[]): T[] {
     return Array.isArray(value) ? value : [value];
 }

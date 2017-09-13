@@ -40,7 +40,12 @@ export class Application extends EventEmitter {
             let style  = "";
             let script = "";
 
-            let output = insert(this._name, options!.data!);
+            let output = "";
+            try {
+                output = insert(this._name, options!.data!);
+            } catch (error) {
+                console.error(error);
+            }
 
             if (style) {
                 output = output.replace(/<\/Styles(.*)\/>/g, "<style$1>" + style.replace("$", () => "\\$") + "</style>");

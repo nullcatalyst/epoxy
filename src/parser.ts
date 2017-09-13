@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as html from "htmlparser2";
 import * as Promise from "bluebird";
+import { emptyString } from "./util";
 import { Module } from "./module";
 import { Library } from "./library";
 
@@ -50,7 +51,7 @@ export class Parser {
                 },
                 onend: (): void => {
                     this.onEnd();
-                    resolve(new Module(fileName, this._style, this._script, this._template || noop));
+                    resolve(new Module(fileName, this._style, this._script, this._template || emptyString));
                 },
             }, {
                 xmlMode:                    false,
@@ -146,8 +147,4 @@ export class Parser {
     protected onEnd(): void {
 
     }
-}
-
-function noop() {
-    return "";
 }

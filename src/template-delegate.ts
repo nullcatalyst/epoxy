@@ -1,3 +1,4 @@
+import { emptyString } from "./util";
 import { Parser, ParserDelegate } from "./parser";
 import { escapeNone, escapeXml, escapeTmpl } from "./escape";
 
@@ -105,12 +106,14 @@ export class TemplateDelegate implements ParserDelegate {
         if (this._stack == 0) {
             this._parsed += "`)}return $buf.join(``);";
 
-            // console.log("fn->", this._parsed);
+            let templateFn: TemplateFunction = emptyString;
             try {
-                parser.appendTemplate(new Function("$esc", "$ins", "$locals", this._parsed) as TemplateFunction);
+                templateFn = new Function("$esc", "$ins", "$locals", this._parsed) as TemplateFunction;
             } catch (error) {
                 console.error(error);
+                console.log(this._parsed);
             }
+            parser.appendTemplate(templateFn);
 
             parser.changeDelegate(null);
         }
