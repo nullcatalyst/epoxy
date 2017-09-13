@@ -84,8 +84,11 @@ export class Application extends EventEmitter {
             this.emit("output", output);
 
             function insert($name: string, $locals: any): string {
-                const [module, render] = renderFns[$name];
+                if (!($name in renderFns)) {
+                    throw new Error(`No template found for name "${$name}"`);
+                }
 
+                const [module, render] = renderFns[$name];
                 if (!included[$name]) {
                     included[$name] = true;
                     style  += module.style;
