@@ -47,13 +47,13 @@ export class Application extends EventEmitter {
                 console.error(error);
             }
 
-            if (style) {
+            if (style && (style = style.trim())) {
                 output = output.replace(/<\/Styles(.*)\/>/g, "<style$1>" + style.replace("$", () => "\\$") + "</style>");
             } else {
                 output = output.replace(/<\/Styles(.*)\/>/g, "");
             }
 
-            if (script) {
+            if (script && (script = script.trim())) {
                 output = output.replace(/<\/Scripts(.*)\/>/g, "<script$1>" + script.replace("$", () => "\\$") + "</script>");
             } else {
                 output = output.replace(/<\/Scripts(.*)\/>/g, "");
