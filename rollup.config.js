@@ -7,13 +7,13 @@ import { minify } from "uglify-es";
 const plugins = [
     tsc({ typescript }),
     node(),
-    uglify({
-        mangle: {
-            toplevel: true,
-            eval: true,
-            // properties: true,
-        },
-    }, minify),
+    // uglify({
+    //     mangle: {
+    //         toplevel: true,
+    //         eval: true,
+    //         // properties: true,
+    //     },
+    // }, minify),
 ];
 
 const external = [
