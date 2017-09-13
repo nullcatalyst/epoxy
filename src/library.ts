@@ -56,9 +56,10 @@ export class Library extends EventEmitter implements LibraryEvents {
             .then((files: string[]) => {
                 return Promise.all(files.map((filePath: string) => {
                     const parser = new this._options.parser(this, filePath);
-                    return parser.promise.catch((error: Error) => {
-                        this.emit("error", error, filePath);
-                    });
+                    return parser.promise
+                        .catch((error: Error) => {
+                            this.emit("error", error, filePath);
+                        });
                 }));
             })
             .then((modules: Module[]) => {
@@ -75,9 +76,6 @@ export class Library extends EventEmitter implements LibraryEvents {
                             .then((module: Module) => {
                                 this._modules[module.name] = module;
                                 this.emit("update", module);
-                            })
-                            .catch((error: Error) => {
-                                this.emit("error", error, fileName);
                             });
                     };
 

@@ -41,8 +41,18 @@ export class Application extends EventEmitter {
             let script = "";
 
             let output = insert(this._name, options!.data!);
-            output = output.replace(/<\/Styles(.*)\/>/g, "<style$1>" + style.replace("$", () => "\\$") + "</style>");
-            output = output.replace(/<\/Scripts(.*)\/>/g, "<script$1>" + script.replace("$", () => "\\$") + "</script>");
+
+            if (style) {
+                output = output.replace(/<\/Styles(.*)\/>/g, "<style$1>" + style.replace("$", () => "\\$") + "</style>");
+            } else {
+                output = output.replace(/<\/Styles(.*)\/>/g, "");
+            }
+
+            if (script) {
+                output = output.replace(/<\/Scripts(.*)\/>/g, "<script$1>" + script.replace("$", () => "\\$") + "</script>");
+            } else {
+                output = output.replace(/<\/Scripts(.*)\/>/g, "");
+            }
 
             if (options!.minify!) {
                 output = htmlmin.minify(output, {

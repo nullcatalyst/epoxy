@@ -106,7 +106,12 @@ export class TemplateDelegate implements ParserDelegate {
             this._parsed += "`)}return $buf.join(``);";
 
             // console.log("fn->", this._parsed);
-            parser.appendTemplate(new Function("$esc", "$ins", "$locals", this._parsed) as TemplateFunction);
+            try {
+                parser.appendTemplate(new Function("$esc", "$ins", "$locals", this._parsed) as TemplateFunction);
+            } catch (error) {
+                console.error(error);
+            }
+
             parser.changeDelegate(null);
         }
     }
