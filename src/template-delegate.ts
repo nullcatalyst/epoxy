@@ -5,12 +5,12 @@ import { escapeNone, escapeXml, escapeTmpl } from "./escape";
 const VALUE         = "value";
 const VALUE_OPEN    = "{{";
 const VALUE_CLOSE   = "}}";
-const RAW           = "raw";
-const RAW_OPEN      = "{=";
-const RAW_CLOSE     = "=}";
+const HTML          = "html";
+const HTML_OPEN     = "<%=";
+const HTML_CLOSE    = "%>";
 const CODE          = "code";
-const CODE_OPEN     = "{#";
-const CODE_CLOSE    = "#}";
+const CODE_OPEN     = "<%";
+const CODE_CLOSE    = "%>";
 
 export class TemplateDelegate implements ParserDelegate {
     private _stack: number;
@@ -123,7 +123,7 @@ export class TemplateDelegate implements ParserDelegate {
         const length    = text.length;
         let position    = 0;
         let nextValue   = nextIndexOf(VALUE_OPEN);
-        let nextRaw     = nextIndexOf(RAW_OPEN);
+        let nextHtml    = nextIndexOf(HTML_OPEN);
         let nextCode    = nextIndexOf(CODE_OPEN);
         let result      = "";
 
@@ -141,15 +141,15 @@ export class TemplateDelegate implements ParserDelegate {
                     break;
                 }
 
-                case RAW: {
-                    result += escapeTmpl(escape(text.slice(position, nextRaw)));
-                    position = nextRaw + RAW_OPEN.length;
+                case HTML: {
+                    result += escapeTmpl(escape(text.slice(position, nextHtml)));
+                    position = nextHtml + HTML_OPEN.length;
 
-                    const end = nextIndexOf(RAW_CLOSE);
+                    const end = nextIndexOf(HTML_CLOSE);
                     result += "`,String(" + text.slice(position, end) + "),`";
-                    position = end + RAW_OPEN.length;
+                    position = end + HTML_OPEN.length;
 
-                    nextRaw = nextIndexOf(RAW_OPEN);
+                    nextHtml = nextIndexOf(HTML_OPEN);
                     break;
                 }
 
@@ -181,15 +181,15 @@ export class TemplateDelegate implements ParserDelegate {
         }
 
         function hasNext(): boolean {
-            return nextValue < length || nextRaw < length || nextCode < length;
+            return nextValue < length || nextHtml < length || nextCode < length;
         }
 
         function nextType(): string {
-            if (nextValue < nextCode || nextRaw < nextCode) {
-                if (nextValue < nextRaw) {
+            if (nextValue < nextCode || nextHtml < nextCode) {
+                if (nextValue < nextHtml) {
                     return VALUE;
                 } else {
-                    return RAW;
+                    return HTML;
                 }
             } else {
                 return CODE;
@@ -247,7 +247,7 @@ function toAttributeString(attributes: MapLike<string>): string {
     if (attributes) {
         for (let attribute in attributes) {
             result += " " + attribute;
-    
+
             if (attributes[attribute]) {
                 result += "=\"" + attributes[attribute] + "\"";
             }
