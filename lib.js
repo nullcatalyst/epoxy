@@ -367,7 +367,6 @@ class TemplateDelegate {
                     const end = nextIndexOf(VALUE_CLOSE);
                     result += "`,$esc(" + text.slice(position, end) + "),`";
                     position = end + VALUE_CLOSE.length;
-                    nextValue = nextIndexOf(VALUE_OPEN);
                     break;
                 }
                 case HTML: {
@@ -375,8 +374,7 @@ class TemplateDelegate {
                     position = nextHtml + HTML_OPEN.length;
                     const end = nextIndexOf(HTML_CLOSE);
                     result += "`,String(" + text.slice(position, end) + "),`";
-                    position = end + HTML_OPEN.length;
-                    nextHtml = nextIndexOf(HTML_OPEN);
+                    position = end + HTML_CLOSE.length;
                     break;
                 }
                 case CODE: {
@@ -385,7 +383,6 @@ class TemplateDelegate {
                     const end = nextIndexOf(CODE_CLOSE);
                     result += "`);" + text.slice(position, end) + ";$buf.push(`";
                     position = end + CODE_CLOSE.length;
-                    nextCode = nextIndexOf(CODE_OPEN);
                     break;
                 }
                 default: {
@@ -393,6 +390,9 @@ class TemplateDelegate {
                     break;
                 }
             }
+            nextValue = nextIndexOf(VALUE_OPEN);
+            nextHtml = nextIndexOf(HTML_OPEN);
+            nextCode = nextIndexOf(CODE_OPEN);
         }
         result += escapeTmpl(text.slice(position));
         return result;
@@ -404,13 +404,11 @@ class TemplateDelegate {
             return nextValue < length || nextHtml < length || nextCode < length;
         }
         function nextType() {
-            if (nextValue < nextCode || nextHtml < nextCode) {
-                if (nextValue < nextHtml) {
-                    return VALUE;
-                }
-                else {
-                    return HTML;
-                }
+            if (nextValue <= nextHtml && nextValue <= nextCode) {
+                return VALUE;
+            }
+            else if (nextHtml <= nextCode) {
+                return HTML;
             }
             else {
                 return CODE;
