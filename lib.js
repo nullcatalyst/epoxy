@@ -47,6 +47,38 @@ class Module {
     }
 }
 
+/// START TEMPORARY HACK
+function whitespace(c) {
+    return c === " " || c === "\n" || c === "\t" || c === "\f" || c === "\r";
+}
+html.Tokenizer.prototype._stateBeforeTagName = function (c) {
+    if (c === "%") {
+        this._state = 0; // TEXT;
+    }
+    else if (c === "/") {
+        this._state = 4; // BEFORE_CLOSING_TAG_NAME;
+    }
+    else if (c === "<") {
+        this._cbs.ontext(this._getSection());
+        this._sectionStart = this._index;
+    }
+    else if (c === ">" || this._special !== 0 /* SPECIAL_NONE */ || whitespace(c)) {
+        this._state = 0; // TEXT;
+    }
+    else if (c === "!") {
+        this._state = 14; // BEFORE_DECLARATION;
+        this._sectionStart = this._index + 1;
+    }
+    else if (c === "?") {
+        this._state = 16; // IN_PROCESSING_INSTRUCTION;
+        this._sectionStart = this._index + 1;
+    }
+    else {
+        this._state = (!this._xmlMode && (c === "s" || c === "S")) ? 30 /* BEFORE_SPECIAL */ : 2 /* IN_TAG_NAME */;
+        this._sectionStart = this._index;
+    }
+};
+/// END TEMPORARY HACK
 class Parser$1 {
     constructor(library, fileName) {
         this._delegate = null;
@@ -222,12 +254,12 @@ function escapeTmpl(value) {
 const VALUE = "value";
 const VALUE_OPEN = "{{";
 const VALUE_CLOSE = "}}";
-const RAW = "raw";
-const RAW_OPEN = "{=";
-const RAW_CLOSE = "=}";
+const HTML = "html";
+const HTML_OPEN = "<%=";
+const HTML_CLOSE = "%>";
 const CODE = "code";
-const CODE_OPEN = "{#";
-const CODE_CLOSE = "#}";
+const CODE_OPEN = "<%";
+const CODE_CLOSE = "%>";
 class TemplateDelegate {
     constructor() {
         this._stack = 0;
@@ -324,7 +356,7 @@ class TemplateDelegate {
         const length = text.length;
         let position = 0;
         let nextValue = nextIndexOf(VALUE_OPEN);
-        let nextRaw = nextIndexOf(RAW_OPEN);
+        let nextHtml = nextIndexOf(HTML_OPEN);
         let nextCode = nextIndexOf(CODE_OPEN);
         let result = "";
         while (hasNext()) {
@@ -338,13 +370,13 @@ class TemplateDelegate {
                     nextValue = nextIndexOf(VALUE_OPEN);
                     break;
                 }
-                case RAW: {
-                    result += escapeTmpl(escape(text.slice(position, nextRaw)));
-                    position = nextRaw + RAW_OPEN.length;
-                    const end = nextIndexOf(RAW_CLOSE);
+                case HTML: {
+                    result += escapeTmpl(escape(text.slice(position, nextHtml)));
+                    position = nextHtml + HTML_OPEN.length;
+                    const end = nextIndexOf(HTML_CLOSE);
                     result += "`,String(" + text.slice(position, end) + "),`";
-                    position = end + RAW_OPEN.length;
-                    nextRaw = nextIndexOf(RAW_OPEN);
+                    position = end + HTML_OPEN.length;
+                    nextHtml = nextIndexOf(HTML_OPEN);
                     break;
                 }
                 case CODE: {
@@ -369,15 +401,15 @@ class TemplateDelegate {
             return result < 0 ? length : result;
         }
         function hasNext() {
-            return nextValue < length || nextRaw < length || nextCode < length;
+            return nextValue < length || nextHtml < length || nextCode < length;
         }
         function nextType() {
-            if (nextValue < nextCode || nextRaw < nextCode) {
-                if (nextValue < nextRaw) {
+            if (nextValue < nextCode || nextHtml < nextCode) {
+                if (nextValue < nextHtml) {
                     return VALUE;
                 }
                 else {
-                    return RAW;
+                    return HTML;
                 }
             }
             else {

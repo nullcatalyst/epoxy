@@ -17,6 +17,34 @@ export interface ParserDelegateClass {
     new(): ParserDelegate;
 }
 
+/// START TEMPORARY HACK
+function whitespace(c) {
+    return c === " " || c === "\n" || c === "\t" || c === "\f" || c === "\r";
+}
+
+(html as any).Tokenizer.prototype._stateBeforeTagName = function(c: string): void {
+    if (c === "%") {
+        this._state = 0; // TEXT;
+    } else if (c === "/") {
+        this._state = 4; // BEFORE_CLOSING_TAG_NAME;
+    } else if (c === "<") {
+        this._cbs.ontext(this._getSection());
+        this._sectionStart = this._index;
+    } else if (c === ">" || this._special !== 0 /* SPECIAL_NONE */ || whitespace(c)) {
+        this._state = 0; // TEXT;
+    } else if (c === "!") {
+        this._state = 14; // BEFORE_DECLARATION;
+        this._sectionStart = this._index + 1;
+    } else if (c === "?") {
+        this._state = 16; // IN_PROCESSING_INSTRUCTION;
+        this._sectionStart = this._index + 1;
+    } else {
+        this._state = (!this._xmlMode && (c === "s" || c === "S")) ? 30 /* BEFORE_SPECIAL */ : 2 /* IN_TAG_NAME */;
+        this._sectionStart = this._index;
+    }
+}
+/// END TEMPORARY HACK
+
 export class Parser {
     private _delegate: ParserDelegate | null;
     private _delegates: { [tagName: string]: ParserDelegateClass };
