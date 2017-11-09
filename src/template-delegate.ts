@@ -32,7 +32,7 @@ export class TemplateDelegate implements ParserDelegate {
 
     onText(parser: Parser, text: string): void {
         if (!this._ignore) {
-            this._parsed += this.parseText(text, escapeNone);
+            this._parsed += parseText(text, escapeNone);
         }
     }
 
@@ -50,7 +50,7 @@ export class TemplateDelegate implements ParserDelegate {
                     text += " " + escapeTmpl(escapeXml(attribute));
 
                     if (attributes[attribute]) {
-                        text += "=\"" + this.parseText(attributes[attribute], escapeXml) + "\"";
+                        text += "=\"" + parseText(attributes[attribute], escapeXml) + "\"";
                     }
                 }
 
@@ -69,7 +69,7 @@ export class TemplateDelegate implements ParserDelegate {
                     this._parsed += "`,$ins(`" + escapeTmpl(tagName) + "`,{";
 
                     for (let attribute in attributes) {
-                        this._parsed += this.parseAttribute(attribute, attributes[attribute]);
+                        this._parsed += parseAttribute(attribute, attributes[attribute]);
                     }
 
                     this._parsed += "[`$children`]:function(){var $buf=[];$buf.push(`";
@@ -118,119 +118,6 @@ export class TemplateDelegate implements ParserDelegate {
             parser.changeDelegate(null);
         }
     }
-
-    private parseText(text: string, escape: EscapeFunction): string {
-        const length    = text.length;
-        let position    = 0;
-        let nextValue   = nextIndexOf(VALUE_OPEN);
-        let nextHtml    = nextIndexOf(HTML_OPEN);
-        let nextCode    = nextIndexOf(CODE_OPEN);
-        let result      = "";
-
-        while (hasNext()) {
-            switch (nextType()) {
-                case VALUE: {
-                    result += escapeTmpl(escape(text.slice(position, nextValue)));
-                    position = nextValue + VALUE_OPEN.length;
-
-                    const end = nextIndexOf(VALUE_CLOSE);
-                    result += "`,$esc(" + text.slice(position, end) + "),`";
-                    position = end + VALUE_CLOSE.length;
-                    break;
-                }
-
-                case HTML: {
-                    result += escapeTmpl(escape(text.slice(position, nextHtml)));
-                    position = nextHtml + HTML_OPEN.length;
-
-                    const end = nextIndexOf(HTML_CLOSE);
-                    result += "`,String(" + text.slice(position, end) + "),`";
-                    position = end + HTML_CLOSE.length;
-                    break;
-                }
-
-                case CODE: {
-                    result += escapeTmpl(escape(text.slice(position, nextCode)));
-                    position = nextCode + CODE_OPEN.length;
-
-                    const end = nextIndexOf(CODE_CLOSE);
-                    result += "`);" + text.slice(position, end) + ";$buf.push(`";
-                    position = end + CODE_CLOSE.length;
-                    break;
-                }
-
-                default: {
-                    console.error("");
-                    break;
-                }
-            }
-
-            nextValue = nextIndexOf(VALUE_OPEN);
-            nextHtml  = nextIndexOf(HTML_OPEN);
-            nextCode  = nextIndexOf(CODE_OPEN);
-        }
-
-        result += escapeTmpl(text.slice(position));
-        return result;
-
-        function nextIndexOf(substring: string): number {
-            const result = text.indexOf(substring, position);
-            return result < 0 ? length : result;
-        }
-
-        function hasNext(): boolean {
-            return nextValue < length || nextHtml < length || nextCode < length;
-        }
-
-        function nextType(): string {
-            if (nextValue <= nextHtml && nextValue <= nextCode) {
-                return VALUE;
-            } else if (nextHtml <= nextCode) {
-                return HTML;
-            } else {
-                return CODE;
-            }
-        }
-    }
-
-    private parseAttribute(name: string, value: string): string {
-        if (isStringSurrounded(name, VALUE_OPEN, VALUE_CLOSE) && value === "") {
-            return "..." + name.slice(VALUE_OPEN.length, -VALUE_CLOSE.length) + ",";
-        }
-
-        return "[`" + escapeTmpl(name) + "`]:" + this.parseAttributeValue(value) + ","
-    }
-
-    private parseAttributeValue(text: string): string {
-        const length    = text.length;
-        let position    = 0;
-        let nextValue   = nextIndexOf(VALUE_OPEN);
-        let result      = "";
-
-        // Special case -> passing (only) a value
-        if (isStringSurrounded(text, VALUE_OPEN, VALUE_CLOSE)) {
-            return "(" + text.slice(VALUE_OPEN.length, -VALUE_CLOSE.length) + ")";
-        }
-
-        while (nextValue < length) {
-            result += escapeTmpl(escapeXml(text.slice(position, nextValue)));
-            position = nextValue + VALUE_OPEN.length;
-
-            const end = nextIndexOf(VALUE_CLOSE);
-            result += "`+$esc(" + text.slice(position, end) + ")+`";
-            position = end + VALUE_CLOSE.length;
-
-            nextValue = nextIndexOf(VALUE_OPEN);
-        }
-
-        result += escapeTmpl(text.slice(position));
-        return "`" + result + "`";
-
-        function nextIndexOf(substring: string): number {
-            const result = text.indexOf(substring, position);
-            return result < 0 ? length : result;
-        }
-    }
 }
 
 function isStringSurrounded(test: string, prefix: string, postfix: string): boolean {
@@ -251,4 +138,117 @@ function toAttributeString(attributes: MapLike<string>): string {
     }
 
     return result;
+}
+
+function parseAttribute(name: string, value: string): string {
+    if (isStringSurrounded(name, VALUE_OPEN, VALUE_CLOSE) && value === "") {
+        return "..." + name.slice(VALUE_OPEN.length, -VALUE_CLOSE.length) + ",";
+    }
+
+    return "[`" + escapeTmpl(name) + "`]:" + parseAttributeValue(value) + ","
+}
+
+function parseAttributeValue(text: string): string {
+    const length    = text.length;
+    let position    = 0;
+    let nextValue   = nextIndexOf(VALUE_OPEN);
+    let result      = "";
+
+    // Special case -> passing (only) a value
+    if (isStringSurrounded(text, VALUE_OPEN, VALUE_CLOSE)) {
+        return "(" + text.slice(VALUE_OPEN.length, -VALUE_CLOSE.length) + ")";
+    }
+
+    while (nextValue < length) {
+        result += escapeTmpl(escapeXml(text.slice(position, nextValue)));
+        position = nextValue + VALUE_OPEN.length;
+
+        const end = nextIndexOf(VALUE_CLOSE);
+        result += "`+$esc(" + text.slice(position, end) + ")+`";
+        position = end + VALUE_CLOSE.length;
+
+        nextValue = nextIndexOf(VALUE_OPEN);
+    }
+
+    result += escapeTmpl(text.slice(position));
+    return "`" + result + "`";
+
+    function nextIndexOf(substring: string): number {
+        const result = text.indexOf(substring, position);
+        return result < 0 ? length : result;
+    }
+}
+
+function parseText(text: string, escape: EscapeFunction): string {
+    const length    = text.length;
+    let position    = 0;
+    let nextValue   = nextIndexOf(VALUE_OPEN);
+    let nextHtml    = nextIndexOf(HTML_OPEN);
+    let nextCode    = nextIndexOf(CODE_OPEN);
+    let result      = "";
+
+    while (hasNext()) {
+        switch (nextType()) {
+            case VALUE: {
+                result += escapeTmpl(escape(text.slice(position, nextValue)));
+                position = nextValue + VALUE_OPEN.length;
+
+                const end = nextIndexOf(VALUE_CLOSE);
+                result += "`,$esc(" + text.slice(position, end) + "),`";
+                position = end + VALUE_CLOSE.length;
+                break;
+            }
+
+            case HTML: {
+                result += escapeTmpl(escape(text.slice(position, nextHtml)));
+                position = nextHtml + HTML_OPEN.length;
+
+                const end = nextIndexOf(HTML_CLOSE);
+                result += "`,String(" + text.slice(position, end) + "),`";
+                position = end + HTML_CLOSE.length;
+                break;
+            }
+
+            case CODE: {
+                result += escapeTmpl(escape(text.slice(position, nextCode)));
+                position = nextCode + CODE_OPEN.length;
+
+                const end = nextIndexOf(CODE_CLOSE);
+                result += "`);" + text.slice(position, end) + ";$buf.push(`";
+                position = end + CODE_CLOSE.length;
+                break;
+            }
+
+            default: {
+                console.error("");
+                break;
+            }
+        }
+
+        nextValue = nextIndexOf(VALUE_OPEN);
+        nextHtml  = nextIndexOf(HTML_OPEN);
+        nextCode  = nextIndexOf(CODE_OPEN);
+    }
+
+    result += escapeTmpl(text.slice(position));
+    return result;
+
+    function nextIndexOf(substring: string): number {
+        const result = text.indexOf(substring, position);
+        return result < 0 ? length : result;
+    }
+
+    function hasNext(): boolean {
+        return nextValue < length || nextHtml < length || nextCode < length;
+    }
+
+    function nextType(): string {
+        if (nextValue <= nextHtml && nextValue <= nextCode) {
+            return VALUE;
+        } else if (nextHtml <= nextCode) {
+            return HTML;
+        } else {
+            return CODE;
+        }
+    }
 }
