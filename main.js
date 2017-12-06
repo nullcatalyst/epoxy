@@ -26,35 +26,44 @@ function start() {
         watch: !!config.watch,
         sources: toArray(config.sources),
     });
-    let apps = outputs.map((output) => {
-        const app = new Application(lib, output.entry, {
-            minify: !!output.minify,
-            file: output.file,
-            data: output.data,
+    let apps = outputs.map((result) => {
+        const app = new Application(lib, result.entry, {
+            minify: !!result.minify,
+            output: result.output,
+            data: result.data,
         });
-        app.on("output", (result) => {
+        app.on("output", (output) => {
             // console.log("OUTPUT");
-            if (output.file) {
-                mkdirp(path.dirname(output.file), (error, made) => {
+            if (result.output) {
+                mkdirp(path.dirname(result.output), (error, made) => {
                     if (error) {
                         return console.error(error);
                     }
-                    fs.writeFile(output.file, result, { encoding: "utf8" }, (error) => {
+                    fs.writeFile(result.output, output, { encoding: "utf8" }, (error) => {
                         if (error) {
                             return console.error(error);
                         }
-                        console.log("Output", output.file);
+                        console.log("Output", result.output);
                     });
                 });
             }
             else {
-                console.log("[" + output.entry + "]:");
-                console.log(result + "\n");
+                console.log("[" + result.entry + "]:");
+                console.log(output + "\n");
             }
         });
         return app;
     });
-    const watcher = chokidar.watch(configPath, { ignoreInitial: true })
+    let watchFiles = [configPath];
+    if (config.watchFiles) {
+        if (Array.isArray(config.watchFiles)) {
+            watchFiles.push(...config.watchFiles);
+        }
+        else {
+            watchFiles.push(config.watchFiles);
+        }
+    }
+    const watcher = chokidar.watch(watchFiles, { ignoreInitial: true })
         .on("change", () => { watcher.close(); lib.stop(); start(); })
         .on("unlink", () => { watcher.close(); lib.stop(); });
 }

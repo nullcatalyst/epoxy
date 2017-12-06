@@ -1,6 +1,5 @@
 import * as path from "path";
 import { escapeXml } from "./escape";
-import { file2tag } from "./util";
 
 export class Module {
     private _fileName: string;
@@ -10,13 +9,12 @@ export class Module {
     private _script: string;
     private _template: TemplateFunction;
 
-    constructor(fileName: string, style: string, script: string, template: TemplateFunction) {
-        this._fileName = fileName;
-        this._name = file2tag(fileName);
-
-        this._style = style;
-        this._script = script;
-        this._template = template;
+    constructor(fileName: string, name: string, style: string, script: string, template: TemplateFunction) {
+        this._fileName  = fileName;
+        this._name      = name;
+        this._style     = style;
+        this._script    = script;
+        this._template  = template;
     }
 
     get fileName(): string {

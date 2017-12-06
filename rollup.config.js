@@ -29,6 +29,7 @@ const external = [
     "html-minifier",
     "htmlparser2",
     "mkdirp",
+    "uglify-js",
 ];
 
 const globals = {
@@ -44,6 +45,7 @@ const globals = {
     "html-minifier": "require('html-minifier')",
     "htmlparser2": "require('htmlparser2')",
     "mkdirp": "require('mkdirp')",
+    "uglify-js": "require('uglify-js')",
 };
 
 export default [

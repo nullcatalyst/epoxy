@@ -12,6 +12,7 @@ var path = require('path');
 var fs = require('fs');
 var html = require('htmlparser2');
 var htmlmin = require('html-minifier');
+var uglify = require('uglify-js');
 
 function emptyString() { return ""; }
 
@@ -23,9 +24,9 @@ function file2tag(fileName) {
 }
 
 class Module {
-    constructor(fileName, style, script, template) {
+    constructor(fileName, name, style, script, template) {
         this._fileName = fileName;
-        this._name = file2tag(fileName);
+        this._name = name;
         this._style = style;
         this._script = script;
         this._template = template;
@@ -83,6 +84,7 @@ class Parser$1 {
     constructor(library, fileName) {
         this._delegate = null;
         this._delegates = {};
+        this._name = file2tag(fileName);
         this._style = "";
         this._script = "";
         this._template = null;
@@ -103,7 +105,7 @@ class Parser$1 {
                 },
                 onend: () => {
                     this.onEnd();
-                    resolve$$1(new Module(fileName, this._style, this._script, this._template || emptyString));
+                    resolve$$1(new Module(fileName, this._name, this._style, this._script, this._template || emptyString));
                 },
             }, {
                 xmlMode: false,
@@ -133,6 +135,9 @@ class Parser$1 {
     }
     addTagDelegate(tagName, delegateClass) {
         this._delegates[tagName] = delegateClass;
+    }
+    changeName(name) {
+        this._name = name;
     }
     appendStyle(style) {
         this._style += style;
@@ -176,6 +181,31 @@ class Parser$1 {
         }
     }
     onEnd() {
+    }
+}
+
+class NameDelegate {
+    constructor() {
+        this._stack = 0;
+        this._contents = "";
+    }
+    onError(parser, error) {
+    }
+    onText(parser, text) {
+        if (this._stack != 1) {
+            return;
+        }
+        this._contents += text;
+    }
+    onOpenTag(parser, tagName, attributes) {
+        ++this._stack;
+    }
+    onCloseTag(parser, tagName) {
+        --this._stack;
+        if (this._stack == 0) {
+            parser.changeName(this._contents);
+            parser.changeDelegate(null);
+        }
     }
 }
 
@@ -271,7 +301,7 @@ class TemplateDelegate {
     }
     onText(parser, text) {
         if (!this._ignore) {
-            this._parsed += this.parseText(text, escapeNone);
+            this._parsed += parseText(text, escapeNone);
         }
     }
     onOpenTag(parser, tagName, attributes) {
@@ -284,7 +314,7 @@ class TemplateDelegate {
                 for (let attribute in attributes) {
                     text += " " + escapeTmpl(escapeXml(attribute));
                     if (attributes[attribute]) {
-                        text += "=\"" + this.parseText(attributes[attribute], escapeXml) + "\"";
+                        text += "=\"" + parseText(attributes[attribute], escapeXml) + "\"";
                     }
                 }
                 this._parsed += text + ">";
@@ -305,7 +335,7 @@ class TemplateDelegate {
                 else {
                     this._parsed += "`,$ins(`" + escapeTmpl(tagName) + "`,{";
                     for (let attribute in attributes) {
-                        this._parsed += this.parseAttribute(attribute, attributes[attribute]);
+                        this._parsed += parseAttribute(attribute, attributes[attribute]);
                     }
                     this._parsed += "[`$children`]:function(){var $buf=[];$buf.push(`";
                 }
@@ -352,99 +382,6 @@ class TemplateDelegate {
             parser.changeDelegate(null);
         }
     }
-    parseText(text, escape) {
-        const length = text.length;
-        let position = 0;
-        let nextValue = nextIndexOf(VALUE_OPEN);
-        let nextHtml = nextIndexOf(HTML_OPEN);
-        let nextCode = nextIndexOf(CODE_OPEN);
-        let result = "";
-        while (hasNext()) {
-            switch (nextType()) {
-                case VALUE: {
-                    result += escapeTmpl(escape(text.slice(position, nextValue)));
-                    position = nextValue + VALUE_OPEN.length;
-                    const end = nextIndexOf(VALUE_CLOSE);
-                    result += "`,$esc(" + text.slice(position, end) + "),`";
-                    position = end + VALUE_CLOSE.length;
-                    break;
-                }
-                case HTML: {
-                    result += escapeTmpl(escape(text.slice(position, nextHtml)));
-                    position = nextHtml + HTML_OPEN.length;
-                    const end = nextIndexOf(HTML_CLOSE);
-                    result += "`,String(" + text.slice(position, end) + "),`";
-                    position = end + HTML_CLOSE.length;
-                    break;
-                }
-                case CODE: {
-                    result += escapeTmpl(escape(text.slice(position, nextCode)));
-                    position = nextCode + CODE_OPEN.length;
-                    const end = nextIndexOf(CODE_CLOSE);
-                    result += "`);" + text.slice(position, end) + ";$buf.push(`";
-                    position = end + CODE_CLOSE.length;
-                    break;
-                }
-                default: {
-                    console.error("");
-                    break;
-                }
-            }
-            nextValue = nextIndexOf(VALUE_OPEN);
-            nextHtml = nextIndexOf(HTML_OPEN);
-            nextCode = nextIndexOf(CODE_OPEN);
-        }
-        result += escapeTmpl(text.slice(position));
-        return result;
-        function nextIndexOf(substring) {
-            const result = text.indexOf(substring, position);
-            return result < 0 ? length : result;
-        }
-        function hasNext() {
-            return nextValue < length || nextHtml < length || nextCode < length;
-        }
-        function nextType() {
-            if (nextValue <= nextHtml && nextValue <= nextCode) {
-                return VALUE;
-            }
-            else if (nextHtml <= nextCode) {
-                return HTML;
-            }
-            else {
-                return CODE;
-            }
-        }
-    }
-    parseAttribute(name, value) {
-        if (isStringSurrounded(name, VALUE_OPEN, VALUE_CLOSE) && value === "") {
-            return "..." + name.slice(VALUE_OPEN.length, -VALUE_CLOSE.length) + ",";
-        }
-        return "[`" + escapeTmpl(name) + "`]:" + this.parseAttributeValue(value) + ",";
-    }
-    parseAttributeValue(text) {
-        const length = text.length;
-        let position = 0;
-        let nextValue = nextIndexOf(VALUE_OPEN);
-        let result = "";
-        // Special case -> passing (only) a value
-        if (isStringSurrounded(text, VALUE_OPEN, VALUE_CLOSE)) {
-            return "(" + text.slice(VALUE_OPEN.length, -VALUE_CLOSE.length) + ")";
-        }
-        while (nextValue < length) {
-            result += escapeTmpl(escapeXml(text.slice(position, nextValue)));
-            position = nextValue + VALUE_OPEN.length;
-            const end = nextIndexOf(VALUE_CLOSE);
-            result += "`+$esc(" + text.slice(position, end) + ")+`";
-            position = end + VALUE_CLOSE.length;
-            nextValue = nextIndexOf(VALUE_OPEN);
-        }
-        result += escapeTmpl(text.slice(position));
-        return "`" + result + "`";
-        function nextIndexOf(substring) {
-            const result = text.indexOf(substring, position);
-            return result < 0 ? length : result;
-        }
-    }
 }
 function isStringSurrounded(test, prefix, postfix) {
     return test.startsWith(prefix) && test.endsWith(postfix);
@@ -461,10 +398,104 @@ function toAttributeString(attributes) {
     }
     return result;
 }
+function parseAttribute(name, value) {
+    if (isStringSurrounded(name, VALUE_OPEN, VALUE_CLOSE) && value === "") {
+        return "..." + name.slice(VALUE_OPEN.length, -VALUE_CLOSE.length) + ",";
+    }
+    return "[`" + escapeTmpl(name) + "`]:" + parseAttributeValue(value) + ",";
+}
+function parseAttributeValue(text) {
+    const length = text.length;
+    let position = 0;
+    let nextValue = nextIndexOf(VALUE_OPEN);
+    let result = "";
+    // Special case -> passing (only) a value
+    if (isStringSurrounded(text, VALUE_OPEN, VALUE_CLOSE)) {
+        return "(" + text.slice(VALUE_OPEN.length, -VALUE_CLOSE.length) + ")";
+    }
+    while (nextValue < length) {
+        result += escapeTmpl(escapeXml(text.slice(position, nextValue)));
+        position = nextValue + VALUE_OPEN.length;
+        const end = nextIndexOf(VALUE_CLOSE);
+        result += "`+$esc(" + text.slice(position, end) + ")+`";
+        position = end + VALUE_CLOSE.length;
+        nextValue = nextIndexOf(VALUE_OPEN);
+    }
+    result += escapeTmpl(text.slice(position));
+    return "`" + result + "`";
+    function nextIndexOf(substring) {
+        const result = text.indexOf(substring, position);
+        return result < 0 ? length : result;
+    }
+}
+function parseText(text, escape) {
+    const length = text.length;
+    let position = 0;
+    let nextValue = nextIndexOf(VALUE_OPEN);
+    let nextHtml = nextIndexOf(HTML_OPEN);
+    let nextCode = nextIndexOf(CODE_OPEN);
+    let result = "";
+    while (hasNext()) {
+        switch (nextType()) {
+            case VALUE: {
+                result += escapeTmpl(escape(text.slice(position, nextValue)));
+                position = nextValue + VALUE_OPEN.length;
+                const end = nextIndexOf(VALUE_CLOSE);
+                result += "`,$esc(" + text.slice(position, end) + "),`";
+                position = end + VALUE_CLOSE.length;
+                break;
+            }
+            case HTML: {
+                result += escapeTmpl(escape(text.slice(position, nextHtml)));
+                position = nextHtml + HTML_OPEN.length;
+                const end = nextIndexOf(HTML_CLOSE);
+                result += "`,String(" + text.slice(position, end) + "),`";
+                position = end + HTML_CLOSE.length;
+                break;
+            }
+            case CODE: {
+                result += escapeTmpl(escape(text.slice(position, nextCode)));
+                position = nextCode + CODE_OPEN.length;
+                const end = nextIndexOf(CODE_CLOSE);
+                result += "`);" + text.slice(position, end) + ";$buf.push(`";
+                position = end + CODE_CLOSE.length;
+                break;
+            }
+            default: {
+                console.error("");
+                break;
+            }
+        }
+        nextValue = nextIndexOf(VALUE_OPEN);
+        nextHtml = nextIndexOf(HTML_OPEN);
+        nextCode = nextIndexOf(CODE_OPEN);
+    }
+    result += escapeTmpl(text.slice(position));
+    return result;
+    function nextIndexOf(substring) {
+        const result = text.indexOf(substring, position);
+        return result < 0 ? length : result;
+    }
+    function hasNext() {
+        return nextValue < length || nextHtml < length || nextCode < length;
+    }
+    function nextType() {
+        if (nextValue <= nextHtml && nextValue <= nextCode) {
+            return VALUE;
+        }
+        else if (nextHtml <= nextCode) {
+            return HTML;
+        }
+        else {
+            return CODE;
+        }
+    }
+}
 
 class DefaultParser extends Parser$1 {
     constructor(library, fileName) {
         super(library, fileName);
+        this.addTagDelegate("name", NameDelegate);
         this.addTagDelegate("style", StyleDelegate);
         this.addTagDelegate("script", ScriptDelegate);
         this.addTagDelegate("template", TemplateDelegate);
@@ -583,7 +614,7 @@ class Application extends EventEmitter {
                     collapseWhitespace: true,
                     decodeEntities: true,
                     minifyCSS: true,
-                    minifyJS: true,
+                    minifyJS: uglify.minify,
                     quoteCharacter: '"',
                     removeComments: true,
                     removeRedundantAttributes: true,

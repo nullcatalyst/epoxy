@@ -1,6 +1,7 @@
 import * as EventEmitter from "events";
 import * as Promise from "bluebird";
 import * as htmlmin from "html-minifier";
+import * as uglify from "uglify-js";
 import { escapeXml } from "./escape";
 import { file2tag } from "./util";
 import { Library } from "./library";
@@ -65,7 +66,7 @@ export class Application extends EventEmitter {
                     collapseWhitespace: true,
                     decodeEntities: true,
                     minifyCSS: true,
-                    minifyJS: true,
+                    minifyJS: uglify.minify,
                     quoteCharacter: '"',
                     removeComments: true,
                     removeRedundantAttributes: true,

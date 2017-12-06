@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as html from "htmlparser2";
 import * as Promise from "bluebird";
-import { emptyString } from "./util";
+import { emptyString, file2tag } from "./util";
 import { Module } from "./module";
 import { Library } from "./library";
 
@@ -50,6 +50,7 @@ export class Parser {
     private _delegates: { [tagName: string]: ParserDelegateClass };
     private _promise: Promise<Module>;
 
+    private _name: string;
     private _style: string;
     private _script: string;
     private _template: TemplateFunction | null;
@@ -58,9 +59,10 @@ export class Parser {
         this._delegate  = null;
         this._delegates = {};
 
-        this._style  = "";
-        this._script = "";
-        this._template = null;
+        this._name      = file2tag(fileName);
+        this._style     = "";
+        this._script    = "";
+        this._template  = null;
 
         this._promise = new Promise((resolve, reject) => {
             const parser = new html.Parser({
@@ -79,7 +81,7 @@ export class Parser {
                 },
                 onend: (): void => {
                     this.onEnd();
-                    resolve(new Module(fileName, this._style, this._script, this._template || emptyString));
+                    resolve(new Module(fileName, this._name, this._style, this._script, this._template || emptyString));
                 },
             }, {
                 xmlMode:                    false,
@@ -110,9 +112,13 @@ export class Parser {
     changeDelegate(delegate: ParserDelegate | null): void {
         this._delegate = delegate;
     }
-
+    
     addTagDelegate(tagName: string, delegateClass: ParserDelegateClass) {
         this._delegates[tagName] = delegateClass;
+    }
+
+    changeName(name: string): void {
+        this._name = name;
     }
 
     appendStyle(style: string): void {
