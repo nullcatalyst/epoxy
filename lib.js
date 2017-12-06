@@ -12,7 +12,7 @@ var path = require('path');
 var fs = require('fs');
 var html = require('htmlparser2');
 var htmlmin = require('html-minifier');
-var uglify = require('uglify-js');
+var uglify = require('uglify-es');
 
 function emptyString() { return ""; }
 
@@ -614,7 +614,7 @@ class Application extends EventEmitter {
                     collapseWhitespace: true,
                     decodeEntities: true,
                     minifyCSS: true,
-                    minifyJS: uglify.minify,
+                    minifyJS: function (code) { return uglify.minify(code).code || ""; },
                     quoteCharacter: '"',
                     removeComments: true,
                     removeRedundantAttributes: true,
